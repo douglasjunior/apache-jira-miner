@@ -43,7 +43,7 @@ public class AllProjectsMiner {
         /*
          * este método percorrerá todos os projetos cadastrados e irá minerar suas Issues e comentários
          */
-        for (int i = 301; i <= 400; i++) {
+        for (int i = 201; i <= 300; i++) {
             Projeto projeto = (Projeto) daoProjeto.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaIniciado(projeto)) {
                 HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, 1);
@@ -58,22 +58,6 @@ public class AllProjectsMiner {
             }
         }
 
-        /*
-        
-        List<Projeto> projetos = new DAOProjeto().consultarTodosProjetos();
-        
-        
-        for (Projeto projeto : projetos) {
-        if (projeto.getId() >= 6) {
-        HttpGeronimoMiner httpIssues = new HttpGeronimoMiner(projeto, 1);
-        try {
-        httpIssues.mineraDados();
-        } catch (IOException ex) {
-        ex.printStackTrace();
-        }
-        }
-        }
-         * */
 
     }
 
