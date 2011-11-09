@@ -16,11 +16,7 @@ import java.net.URLEncoder;
 import java.util.Date;
 import pojo.Comentario;
 import pojo.Issue;
-import pojo.Prioridade;
 import pojo.Projeto;
-import pojo.Resolucao;
-import pojo.Status;
-import pojo.Tipo;
 import util.Util;
 
 /**
