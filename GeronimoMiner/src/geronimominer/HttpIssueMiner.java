@@ -53,15 +53,18 @@ public class HttpIssueMiner {
             URL url = new URL(getUrl());
             BufferedReader dis = new BufferedReader(new InputStreamReader(Util.abrirStream(url)));
             System.out.println("---- Conectado a URL : " + getUrl());
-
             lerPaginaHtml(capturarCodigoHtml(dis));
             dis.close();
+            url = null;
+            dis = null;
         }
 
         writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
         System.out.println("-----------------------------------------");
         System.out.println("Terminado a mineração das Issues");
         System.out.println("-----------------------------------------\n");
+        
+        projeto = null;
     }
 
     private void lerPaginaHtml(String[] linhas) {
@@ -69,8 +72,9 @@ public class HttpIssueMiner {
         if (issue != null) {
             lerComentarios(issue, linhas);
         }
-        numeroProximaPagina++;
         issue = null;
+        linhas = null;
+        numeroProximaPagina++;
     }
 
     private Issue lerIssue(String[] linhas) {
@@ -181,10 +185,10 @@ public class HttpIssueMiner {
                 componentes = "None";
             } else {
                 String linha = "";
-                if (linhas[i + 3].contains("</a>")) {
-                    linha = linhas[i + 2] + linhas[i + 3];
-                } else {
-                    linha = linhas[i + 2];
+                int j = i + 2;
+                while (!linhas[j].contains("</div>")) {
+                    linha += linhas[j];
+                    j++;
                 }
                 if (linha.contains(">,")) {
                     String[] comps = linha.split(">,");
@@ -296,10 +300,10 @@ public class HttpIssueMiner {
                 versoes = "None";
             } else {
                 String linha = "";
-                if (linhas[i + 3].contains("</a>")) {
-                    linha = linhas[i + 2] + linhas[i + 3];
-                } else {
-                    linha = linhas[i + 2];
+                int j = i + 2;
+                while (!linhas[j].contains("</div>")) {
+                    linha += linhas[j];
+                    j++;
                 }
                 if (linha.contains(">,")) {
                     String[] comps = linha.split(">,");
@@ -401,7 +405,6 @@ public class HttpIssueMiner {
         for (int i = 0; i < linhas.length; i++) {
             if (linhas[i].contains("action-body flooded")) {
                 Comentario comentario = pegarComentario(linhas, i);
-
                 if (comentario != null && AllProjectsMiner.daoProjeto.insere(comentario)) {
                     issue.addComentario(comentario);
                     if (AllProjectsMiner.daoProjeto.atualiza(issue)) {
@@ -425,6 +428,8 @@ public class HttpIssueMiner {
                 comentario = null;
             }
         }
+        issue = null;
+        linhas = null;
     }
 
     private Comentario pegarComentario(String[] linhas, int i) {
@@ -497,6 +502,7 @@ public class HttpIssueMiner {
             linha = dis.readLine();
         }
         sb.append(linha);
+        dis = null;
         return sb.toString().split("\n");
     }
 }
