@@ -18,7 +18,7 @@ import javax.persistence.*;
 @Table(name = "ISSUE")
 public class Issue implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    //private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -29,28 +29,31 @@ public class Issue implements Serializable {
     private Date dataCriada;
     @Temporal(javax.persistence.TemporalType.DATE)
     private Date dataResolvida;
-    @OneToMany(mappedBy = "issue", orphanRemoval = true,cascade= CascadeType.REFRESH, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "issue", orphanRemoval = true, cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
     @JoinColumn(name = "ISSUE_ID")
     private List<Comentario> comentarios;
-    @Column(length=1000)
+    @Column(length = 1000)
     private String versoesAfetadas;
     @Column(columnDefinition = "LONGTEXT")
     private String componentes;
-    @Column(length=1000)
+    @Column(length = 1000)
     private String versoesFixadas;
-    @Column(length=50)
+    @Column(length = 50)
     private String tipo;
-    @Column(length=50)
+    @Column(length = 50)
     private String status;
-    @Column(length=50)
+    @Column(length = 50)
     private String prioridade;
-    @Column(length=50)
+    @Column(length = 50)
     private String resolucao;
     private int numeroIssue;
     @ManyToOne
     private Projeto projeto;
     @Column(columnDefinition = "TEXT")
     private String ambiente;
+    @OneToMany(mappedBy = "comentario", cascade = CascadeType.REFRESH, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "COMENTARIO_ID")
+    private List<Commits> commits;
 
     public Issue() {
         comentarios = new ArrayList<Comentario>();
@@ -209,6 +212,21 @@ public class Issue implements Serializable {
         comentario.setIssue(this);
     }
 
+    public List<Commits> getCommits() {
+        return commits;
+    }
+
+    public void setCommits(List<Commits> commits) {
+        this.commits = commits;
+    }
+
+    public void addCommit(Commits commit) {
+        if (!getCommits().contains(commit) || commit.getId() == 0) {
+            getCommits().add(commit);
+        }
+        commit.setIssue(this);
+    }
+
     @Override
     public String toString() {
         if (this.getPrioridade() == null) {
@@ -223,5 +241,24 @@ public class Issue implements Serializable {
             getComentarios().remove(comentario);
         }
         comentario.setIssue(null);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        hash += (int) id;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof Issue)) {
+            return false;
+        }
+        Issue other = (Issue) object;
+        if (this.id != other.id) {
+            return false;
+        }
+        return true;
     }
 }

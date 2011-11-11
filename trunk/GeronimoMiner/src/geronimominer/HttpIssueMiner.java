@@ -15,6 +15,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
 import pojo.Comentario;
+import pojo.Commits;
 import pojo.Issue;
 import pojo.Projeto;
 import util.Util;
@@ -63,17 +64,44 @@ public class HttpIssueMiner {
         System.out.println("-----------------------------------------");
         System.out.println("Terminado a mineração das Issues");
         System.out.println("-----------------------------------------\n");
-        
+
         projeto = null;
     }
 
-    private void lerPaginaHtml(String[] linhas) {
-        Issue issue = lerIssue(linhas);
+    private void lerPaginaHtml(final String[] linhas) {
+        final Issue issue = lerIssue(linhas);
         if (issue != null) {
-            lerComentarios(issue, linhas);
+//            Thread thComent = new Thread() {
+//
+//                @Override
+//                public void run() {
+                    lerComentarios(issue, linhas);
+//                    this.interrupt();
+//                    try {
+//                        this.finalize();
+//                    } catch (Throwable ex) {
+//                        ex.printStackTrace();
+//                    }
+//                }
+//            };
+//            thComent.start();
+//            Thread thCommit = new Thread() {
+//
+//                @Override
+//                public void run() {
+//                    lerCommits(issue, linhas);
+//                    this.interrupt();
+//                    try {
+//                        this.finalize();
+//                    } catch (Throwable ex) {
+//                        ex.printStackTrace();
+//                    }
+//                }
+//            };
+//            thCommit.start();
+//            while (!thComent.isInterrupted() || !thCommit.isInterrupted()) {
+//            }
         }
-        issue = null;
-        linhas = null;
         numeroProximaPagina++;
     }
 
@@ -91,22 +119,26 @@ public class HttpIssueMiner {
             projeto.addIssue(issue);
             if (AllProjectsMiner.daoProjeto.insere(issue)) {
                 if (AllProjectsMiner.daoProjeto.atualiza(projeto)) {
-                    System.err.println("----------------------------------------");
-                    System.err.println(issue.getNumeroIssue() + ": Issue cadastrado e adicionado ao Projeto");
-                    System.err.println("----------------------------------------\n");
-                    writeToFile(logFile, "- Issue " + (numeroProximaPagina - 1) + " cadastrada.");
+                    System.err.println("-------- Issue cadastrado e adicionado ao Projeto --------");
+                    System.err.println("Nome: " + issue.getNome());
+                    System.err.println("Numero: " + issue.getNumeroIssue());
+                    System.err.println("----------------------------------------------------------\n");
+                    writeToFile(logFile, "- Issue " + (numeroProximaPagina - 1) + " cadastrada e adicionado ao projeto.");
                 } else {
                     projeto.removeIssue(issue);
-                    System.err.println("----------------------------------------");
-                    System.err.println(issue.getNumeroIssue() + ": Issue cadastrado e *NÃO* adicionado ao Projeto");
-                    System.err.println("----------------------------------------\n");
+                    System.err.println("----- Issue cadastrado e *NÃO* adicionado ao Projeto -----");
+                    System.err.println("Nome: " + issue.getNome());
+                    System.err.println("Numero: " + issue.getNumeroIssue());
+                    writeToFile(logFile, "- Issue " + (numeroProximaPagina - 1) + " cadastrada.");
+                    System.err.println("----------------------------------------------------------\n");
                 }
                 return issue;
             }
             if (!inseriu) {
-                System.err.println("----------------------------------------");
-                System.err.println(issue.getNumeroIssue() + ": A Issue não pode ser cadastrado. Algo não está certo...");
-                System.err.println("----------------------------------------\n");
+                System.err.println("---------------- Erro ao cadastrar Issue ----------------");
+                System.err.println("Nome: " + issue.getNome());
+                System.err.println("Numero: " + issue.getNumeroIssue());
+                System.err.println("----------------------------------------------------------\n");
                 writeToFile(logFile, "- Erro: Issue " + (numeroProximaPagina - 1) + " não foi cadastrada.");
             }
         }
@@ -177,8 +209,6 @@ public class HttpIssueMiner {
 //    <span id="components-val" class="value">
 //        <span class="shorten" id="components-field">
 //              <a href="/jira/browse/LUCENE/component/12311546" title="general/build issues with building Lucene using the ANT build scripts">general/build</a> 
-        String nomeComp = "";
-        String urlComp = "";
         String componentes = "";
         try {
             if (linhas[i + 1].contains("None")) {
@@ -422,8 +452,10 @@ public class HttpIssueMiner {
                     }
                 } else {
                     System.err.println("\n-------- Erro ao Cadastrar Comentario ----------");
-                    System.err.println("");
-                    System.err.println("------------------------------------------------\n");
+                    System.err.println("Autor: " + comentario.getAutor());
+                    System.err.println("Data: " + comentario.getDataComentario() + " / " + comentario.getHoraComentario());
+                    System.err.println("Comentario: " + comentario.getComentario());
+                    System.err.println("-----------------------------------------------------------------\n");
                 }
                 comentario = null;
             }
@@ -469,6 +501,114 @@ public class HttpIssueMiner {
             System.err.println("------------------------------------------------");
         }
         return hora;
+    }
+
+    private void lerCommits(Issue issue, String[] linhas) {
+        for (int i = 0; i < linhas.length; i++) {
+            if (linhas[i].contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>Repository</b></td>")) {
+                Commits commit = pegarCommit(linhas, i);
+                if (commit != null && commit.getId() != 0) {
+                    issue.addCommit(commit);
+                    if (AllProjectsMiner.daoProjeto.atualiza(issue)) {
+                        System.err.println("\n--------- Commit Cadastrado e adicioado a Issue ---------");
+                        System.err.println("Autor: " + commit.getAutor());
+                        System.err.println("Data: " + commit.getDataHora());
+                        System.err.println("Mesangem: " + commit.getMensagem());
+                        System.err.println("-----------------------------------------------------------------\n");
+                    } else {
+                        System.err.println("\n--------- Commit Cadastrado e *NÃO* adicioado a Issue ---------");
+                        System.err.println("Autor: " + commit.getAutor());
+                        System.err.println("Data: " + commit.getDataHora());
+                        System.err.println("Mesangem: " + commit.getMensagem());
+                        System.err.println("-----------------------------------------------------------------\n");
+                    }
+                } else {
+                    System.err.println("\n-------- Erro ao Cadastrar Commit ----------");
+                    System.err.println("Autor: " + commit.getAutor());
+                    System.err.println("Data: " + commit.getDataHora());
+                    System.err.println("Mesangem: " + commit.getMensagem());
+                    System.err.println("-----------------------------------------------------------------\n");
+                }
+                commit = null;
+            }
+        }
+        issue = null;
+        linhas = null;
+    }
+
+    private Commits pegarCommit(String[] linhas, int i) {
+        Commits commit = new Commits();
+        commit.setRepositorio(pegaRespositorio(linhas[i + 7]));
+        commit.setnRevisao(pegaRevisao(linhas[i + 8]));
+        commit.setDataHora(pegaDataHoraCommit(linhas[i + 9]));
+        commit.setAutor(pegaLoginCommit(linhas[i + 10]));
+
+        return commit;
+    }
+
+    private Date pegaDataHoraCommit(String linha) {
+//     <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3">Wed Sep 03 21:58:13 UTC 2008</td>
+        Date data = null;
+        try {
+            
+            System.out.println("--------- Capturado Revisao do Commit ----------");
+            System.out.println("Revisao: " + data);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------ Erro ao capturar Revisao do Commit ------");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return data;
+    }
+
+    private String pegaRevisao(String linha) {
+//     <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3"><a href="http://svn.apache.org/viewvc?view=rev&rev=691802">#691802</a></td>
+        String revisao = "";
+        try {
+            String link = "";
+            String num = "";
+            String[] partes = linha.split("</a>");
+            partes = partes[0].split(">");
+            num = partes[partes.length - 1];
+            partes = partes[partes.length - 2].split("\"");
+            link = partes[partes.length - 1];
+            revisao = "numero=" + num + " / link=" + link;
+            System.out.println("--------- Capturado Revisao do Commit ----------");
+            System.out.println("Revisao: " + revisao);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------ Erro ao capturar Revisao do Commit ------");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return revisao;
+    }
+
+    private String pegaRespositorio(String string) {
+//    <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3">ASF</td>        
+        return pegaLoginCommit(string);
+    }
+
+    private String pegaLoginCommit(String linha) {
+//     <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3">maartenc</td>
+        String login = "";
+        try {
+            String[] partes = linha.split("</td>");
+            partes = partes[0].split(">");
+            linha = partes[partes.length - 1];
+            System.out.println("---------- Capturado Login do Commit -----------");
+            System.out.println("Login: " + login);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------- Erro ao capturar Login do Commit -------");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return login;
     }
 
     private String getUrl() {
