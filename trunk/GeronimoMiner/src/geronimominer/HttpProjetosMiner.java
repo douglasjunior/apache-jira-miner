@@ -29,7 +29,7 @@ public class HttpProjetosMiner {
         URL url = new URL(stringUrl);
 
         System.out.println("---- Conectando a URL : " + stringUrl);
-        BufferedReader dis = new BufferedReader(new InputStreamReader(Util.abrirStream(url)));
+        BufferedReader dis = Util.abrirStream(url);
         System.out.println("---- Conectado a URL : " + stringUrl);
         System.out.println("");
         System.out.println("-----------------------------------------");

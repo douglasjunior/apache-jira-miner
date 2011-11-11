@@ -51,13 +51,13 @@ public class Issue implements Serializable {
     private Projeto projeto;
     @Column(columnDefinition = "TEXT")
     private String ambiente;
-    @OneToMany(mappedBy = "comentario", cascade = CascadeType.REFRESH, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "COMENTARIO_ID")
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.REFRESH, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "ISSUE_ID")
     private List<Commits> commits;
 
     public Issue() {
         comentarios = new ArrayList<Comentario>();
-
+        commits = new ArrayList<Commits>();
     }
 
     public Issue(Projeto projeto) {

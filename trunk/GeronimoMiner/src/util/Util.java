@@ -4,7 +4,9 @@
  */
 package util;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -22,9 +24,9 @@ public class Util {
         return format.parse(yyyyMMdd);
     }
     
-    public static InputStream abrirStream(URL url) {
+    public static BufferedReader abrirStream(URL url) {
         try {
-            return url.openStream();
+            return new BufferedReader(new InputStreamReader(url.openStream()));
         } catch (Exception ex) {
             ex.printStackTrace();
             return abrirStream(url);

@@ -14,16 +14,16 @@ public class IndividualProjectMiner {
 
     public static void main(String[] args) {
         AllProjectsMiner.conectarDao();
+//
+//        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
+//        try {
+//            httpProjetos.minerarProjetos();
+//        } catch (Exception ex) {
+//            ex.printStackTrace();
+//        }
 
-        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
-        try {
-            httpProjetos.minerarProjetos();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-        Projeto projeto = AllProjectsMiner.consultaPorKey("FELIX");
-        int proximaPagina = 168;
+        Projeto projeto = AllProjectsMiner.consultaPorKey("LUCENE");
+        int proximaPagina = 1457;
         
         if (projeto != null) {
             HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina);
