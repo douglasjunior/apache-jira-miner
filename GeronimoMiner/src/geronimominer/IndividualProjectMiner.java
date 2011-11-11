@@ -22,7 +22,7 @@ public class IndividualProjectMiner {
             ex.printStackTrace();
         }
 
-        Projeto projeto = AllProjectsMiner.consultaPorKey("FOR");
+        Projeto projeto = AllProjectsMiner.consultaPorKey("FELIX");
         int proximaPagina = 168;
         
         if (projeto != null) {

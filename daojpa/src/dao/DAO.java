@@ -219,4 +219,14 @@ public class DAO {
         }
         return query.getResultList();
     }
+
+    public boolean fecharConexao() {
+        try {
+            em.clear();
+            em.close();
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
 }
