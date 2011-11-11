@@ -5,6 +5,7 @@
 package pojo;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.persistence.CascadeType;
@@ -47,6 +48,10 @@ public class Commits implements Serializable {
     @ManyToOne
     private Issue issue;
 
+    public Commits() {
+        arquivos = new ArrayList<ArquivoModificado>();
+    }
+    
     public int getId() {
         return id;
     }

@@ -13,7 +13,10 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import pojo.ArquivoModificado;
 import pojo.Comentario;
 import pojo.Commits;
 import pojo.Issue;
@@ -30,6 +33,8 @@ public class HttpIssueMiner {
     private Projeto projeto;
     private String logFile;
     private int inexistentes;
+    private BufferedReader disComentarios;
+    private BufferedReader disCommits;
 
     public HttpIssueMiner() {
     }
@@ -51,13 +56,15 @@ public class HttpIssueMiner {
 
         while (inexistentes <= 40) {
             System.out.println("---- Conectando a URL : " + getUrl());
-            URL url = new URL(getUrl());
-            BufferedReader dis = new BufferedReader(new InputStreamReader(Util.abrirStream(url)));
+            URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
+            URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
+            disComentarios = Util.abrirStream(urlComentarios);
+            disCommits = Util.abrirStream(urlCommmits);
             System.out.println("---- Conectado a URL : " + getUrl());
-            lerPaginaHtml(capturarCodigoHtml(dis));
-            dis.close();
-            url = null;
-            dis = null;
+            lerPaginaHtml(capturarCodigoHtml(disComentarios));
+            disComentarios.close();
+            urlComentarios = null;
+            disComentarios = null;
         }
 
         writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
@@ -68,14 +75,14 @@ public class HttpIssueMiner {
         projeto = null;
     }
 
-    private void lerPaginaHtml(final String[] linhas) {
+    private void lerPaginaHtml(final String[] linhas) throws Exception {
         final Issue issue = lerIssue(linhas);
         if (issue != null) {
 //            Thread thComent = new Thread() {
 //
 //                @Override
 //                public void run() {
-                    lerComentarios(issue, linhas);
+            lerComentarios(issue, linhas);
 //                    this.interrupt();
 //                    try {
 //                        this.finalize();
@@ -89,7 +96,7 @@ public class HttpIssueMiner {
 //
 //                @Override
 //                public void run() {
-//                    lerCommits(issue, linhas);
+            lerCommits(issue, capturarCodigoHtml(disCommits));
 //                    this.interrupt();
 //                    try {
 //                        this.finalize();
@@ -505,9 +512,10 @@ public class HttpIssueMiner {
 
     private void lerCommits(Issue issue, String[] linhas) {
         for (int i = 0; i < linhas.length; i++) {
+            System.out.println(linhas[i]);
             if (linhas[i].contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>Repository</b></td>")) {
                 Commits commit = pegarCommit(linhas, i);
-                if (commit != null && commit.getId() != 0) {
+                if (commit != null && AllProjectsMiner.daoProjeto.insere(commit)) {
                     issue.addCommit(commit);
                     if (AllProjectsMiner.daoProjeto.atualiza(issue)) {
                         System.err.println("\n--------- Commit Cadastrado e adicioado a Issue ---------");
@@ -542,15 +550,99 @@ public class HttpIssueMiner {
         commit.setnRevisao(pegaRevisao(linhas[i + 8]));
         commit.setDataHora(pegaDataHoraCommit(linhas[i + 9]));
         commit.setAutor(pegaLoginCommit(linhas[i + 10]));
-
+        leiArquivosModificados(commit, linhas, i + 16);
         return commit;
+    }
+
+    private void leiArquivosModificados(Commits commit, String[] linhas, int i) {
+        while (!linhas[i].contains("</table>")) {
+            ArquivoModificado arquivo = null;;
+            if (linhas[i].contains("<font ") && linhas[i].contains("<b ")) {
+                while (!linhas[i].contains("<br>")) {
+                    arquivo = new ArquivoModificado();
+                    arquivo.setAcao(pegaAcaoArquivoModificado(linhas[i]));
+                    arquivo.setUrl(pegaURLArquivoModificado(linhas[i + 1]));
+                    arquivo.setNome(pegaNomeArquivoModificado(linhas[i + 1]));
+                    i++;
+                }
+            }
+            if (arquivo != null) {
+                commit.addArquivoModificado(arquivo);
+            }else{
+                i++;
+            }
+        }
+    }
+
+    private String pegaAcaoArquivoModificado(String linha) {
+//                                    <font color="#999933" size="-2"><b title="Modify">MODIFY</b></font>
+        String acao = "";
+        try {
+            String[] partes = linha.split("</b>");
+            partes = partes[0].split(">");
+            acao = partes[partes.length - 1];
+            System.out.println("---------- Capturado Acao do Arquivo -----------");
+            System.out.println("Acao: " + acao);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------- Erro ao capturar Acao do Arquivo -------");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return acao;
+    }
+
+    private String pegaURLArquivoModificado(String linha) {
+//                        <a href="http://svn.apache.org/viewvc/lucene/java/branches/flex_1458/src/java/org/apache/lucene/index/FreqProxFieldMergeState.java/?rev=885265&view=diff&r1=885265&r2=885264&p1=/lucene/java/branches/flex_1458/src/java/org/apache/lucene/index/FreqProxFieldMergeState.java&p2=/lucene/java/branches/flex_1458/src/java/org/apache/lucene/index/FreqProxFieldMergeState.java">/lucene/java/branches/flex_1458/src/java/org/apache/lucene/index/FreqProxFieldMergeState.java</a>
+        String url = "";
+        try {
+            String[] partes = linha.split("href=\"");
+            partes = partes[1].split("\"");
+            url = partes[0];
+            System.out.println("----------- Capturado URL do Arquivo -----------");
+            System.out.println("URL: " + url);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------- Erro ao capturar URL do Arquivo --------");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return url;
+    }
+
+    private String pegaNomeArquivoModificado(String linha) {
+        String nome = "";
+        try {
+            nome = pegaSomenteConteudo(linha);
+            System.out.println("---------- Capturado Nome do Arquivo -----------");
+            System.out.println("URL: " + nome);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------- Erro ao capturar Nome do Arquivo -------");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return nome;
     }
 
     private Date pegaDataHoraCommit(String linha) {
 //     <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3">Wed Sep 03 21:58:13 UTC 2008</td>
         Date data = null;
         try {
-            
+            linha = pegaSomenteConteudo(linha);
+            DateFormat df = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+            String[][] meses = new String[][]{{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}, {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}};
+            String[] partes = linha.split(" ");
+            for (int i = 0; i < meses[0].length; i++) {
+                if (partes[1].equals(meses[0][i])) {
+                    partes[1] = meses[1][i];
+                }
+            }
+            String dt = partes[2] + "/" + partes[1] + "/" + partes[5] + " " + partes[3];
+            data = df.parse(dt);
             System.out.println("--------- Capturado Revisao do Commit ----------");
             System.out.println("Revisao: " + data);
             System.out.println("------------------------------------------------");
@@ -561,6 +653,12 @@ public class HttpIssueMiner {
             System.err.println("------------------------------------------------");
         }
         return data;
+    }
+
+    private String pegaSomenteConteudo(String linha) throws Exception {
+        String[] partes = linha.split("<");
+        partes = partes[partes.length - 2].split(">");
+        return partes[partes.length - 1];
     }
 
     private String pegaRevisao(String linha) {
@@ -587,18 +685,28 @@ public class HttpIssueMiner {
         return revisao;
     }
 
-    private String pegaRespositorio(String string) {
+    private String pegaRespositorio(String linha) {
 //    <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3">ASF</td>        
-        return pegaLoginCommit(string);
+        String repositorio = "";
+        try {
+            repositorio = pegaSomenteConteudo(linha);
+            System.out.println("------- Capturado Respositorio do Commit -------");
+            System.out.println("Login: " + repositorio);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("--- Erro ao capturar Respositorio do Commit ----");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return repositorio;
     }
 
     private String pegaLoginCommit(String linha) {
 //     <td bgcolor="#ffffff" width="10%" valign="top" rowspan="3">maartenc</td>
         String login = "";
         try {
-            String[] partes = linha.split("</td>");
-            partes = partes[0].split(">");
-            linha = partes[partes.length - 1];
+            login = pegaSomenteConteudo(linha);
             System.out.println("---------- Capturado Login do Commit -----------");
             System.out.println("Login: " + login);
             System.out.println("------------------------------------------------");
