@@ -23,27 +23,31 @@ public class AllProjectsMiner {
     }
 
     public static void main(String[] args) {
-        conectarDao();
+
 
 
         /*
          * este método irá coletar todos os projetos da página: "https://issues.apache.org/jira/secure/BrowseProjects.jspa#all"
          * não tem problema rodar este método várias vezes pois não cadastrará projetos repetidos
         
+         * 
+        
+        conectarDao();
         HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
         try {
         httpProjetos.minerarProjetos();
         } catch (Exception ex) {
         ex.printStackTrace();
         }
-        
+        fecharConexao();
         
         
         
         /*
          * este método percorrerá todos os projetos cadastrados e irá minerar suas Issues e comentários
          */
-        for (int i = 201; i <= 300; i++) {
+        for (int i = 301; i <= 400; i++) {
+            conectarDao();
             Projeto projeto = (Projeto) daoProjeto.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaIniciado(projeto)) {
                 HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, 1);
@@ -54,8 +58,9 @@ public class AllProjectsMiner {
                 }
                 projeto = null;
                 httpIssues = null;
-                System.gc();
             }
+            fecharConexao();
+            System.gc();
         }
 
 
@@ -81,5 +86,10 @@ public class AllProjectsMiner {
             return pjts.get(0);
         }
         return null;
+    }
+
+    private static void fecharConexao() {
+        daoProjeto.fecharConexao();
+        daoProjeto = null;
     }
 }
