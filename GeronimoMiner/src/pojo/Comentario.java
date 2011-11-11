@@ -6,6 +6,7 @@ package pojo;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.*;
 
 /**
@@ -16,7 +17,7 @@ import javax.persistence.*;
 @Table(name = "COMENTARIO")
 public class Comentario implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    //private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -28,6 +29,7 @@ public class Comentario implements Serializable {
     private String comentario;
     @ManyToOne
     private Issue issue;
+
 
     public Comentario() {
     }
@@ -74,6 +76,26 @@ public class Comentario implements Serializable {
 
     public void setHoraComentario(String horaComentario) {
         this.horaComentario = horaComentario;
+    }
+
+
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        hash += (int) id;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (!(object instanceof Comentario)) {
+            return false;
+        }
+        Comentario other = (Comentario) object;
+        if (this.id != other.id) {
+            return false;
+        }
+        return true;
     }
 
     @Override
