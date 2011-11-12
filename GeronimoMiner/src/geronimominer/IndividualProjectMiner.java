@@ -14,7 +14,7 @@ public class IndividualProjectMiner {
 
     public static void main(String[] args) {
         AllProjectsMiner.conectarDao();
-//
+
 //        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
 //        try {
 //            httpProjetos.minerarProjetos();

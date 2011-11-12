@@ -22,6 +22,7 @@ public class Issue implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+    @Column(columnDefinition="TEXT")
     private String nome;
     private String assignee;
     private String reporter;
