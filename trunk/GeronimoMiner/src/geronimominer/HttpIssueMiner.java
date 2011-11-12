@@ -527,6 +527,7 @@ public class HttpIssueMiner {
         commit.setnRevisao(pegaRevisao(linhas.get(i + 5)));
         commit.setDataHora(pegaDataHoraCommit(linhas.get(i + 6)));
         commit.setAutor(pegaLoginCommit(linhas.get(i + 7)));
+        commit.setMensagem(linhas.get(i + 8)); // pega mensagem com tags html por nao seguir um padrao
         return commit;
     }
 
