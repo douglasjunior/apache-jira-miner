@@ -8,14 +8,15 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import pojo.ArquivoModificado;
 import pojo.Comentario;
 import pojo.Commits;
@@ -33,8 +34,6 @@ public class HttpIssueMiner {
     private Projeto projeto;
     private String logFile;
     private int inexistentes;
-    private BufferedReader disComentarios;
-    private BufferedReader disCommits;
 
     public HttpIssueMiner() {
     }
@@ -58,13 +57,16 @@ public class HttpIssueMiner {
             System.out.println("---- Conectando a URL : " + getUrl());
             URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
             URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
-            disComentarios = Util.abrirStream(urlComentarios);
-            disCommits = Util.abrirStream(urlCommmits);
+            BufferedReader disComentarios = Util.abrirStream(urlComentarios);
+            BufferedReader disCommits = Util.abrirStream(urlCommmits);
             System.out.println("---- Conectado a URL : " + getUrl());
-            lerPaginaHtml(capturarCodigoHtml(disComentarios));
+            lerPaginasHtmls(capturarCodigoHtml(disComentarios), capturarCodigoHtml(disCommits));
             disComentarios.close();
+            disCommits.close();
             urlComentarios = null;
+            urlCommmits = null;
             disComentarios = null;
+            disCommits = null;
         }
 
         writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
@@ -75,47 +77,22 @@ public class HttpIssueMiner {
         projeto = null;
     }
 
-    private void lerPaginaHtml(final String[] linhas) throws Exception {
-        final Issue issue = lerIssue(linhas);
+    private void lerPaginasHtmls(List<String> linhasComentarios, List<String> linhasCommits) throws Exception {
+        Issue issue = lerIssue(linhasComentarios);
         if (issue != null) {
-//            Thread thComent = new Thread() {
-//
-//                @Override
-//                public void run() {
-            lerComentarios(issue, linhas);
-//                    this.interrupt();
-//                    try {
-//                        this.finalize();
-//                    } catch (Throwable ex) {
-//                        ex.printStackTrace();
-//                    }
-//                }
-//            };
-//            thComent.start();
-//            Thread thCommit = new Thread() {
-//
-//                @Override
-//                public void run() {
-            lerCommits(issue, capturarCodigoHtml(disCommits));
-//                    this.interrupt();
-//                    try {
-//                        this.finalize();
-//                    } catch (Throwable ex) {
-//                        ex.printStackTrace();
-//                    }
-//                }
-//            };
-//            thCommit.start();
-//            while (!thComent.isInterrupted() || !thCommit.isInterrupted()) {
-//            }
+            lerComentarios(issue, linhasComentarios);
+            lerCommits(issue, linhasCommits);
         }
+        issue = null;
+        linhasComentarios = null;
+        linhasCommits = null;
         numeroProximaPagina++;
     }
 
-    private Issue lerIssue(String[] linhas) {
+    private Issue lerIssue(List<String> linhas) {
         Issue issue = new Issue();
         issue.setNumeroIssue(numeroProximaPagina);
-        for (int i = 0; i < linhas.length; i++) {
+        for (int i = 0; i < linhas.size(); i++) {
             if (!pegarDadosIssue(issue, linhas, i)) {
                 return null;
             }
@@ -152,42 +129,42 @@ public class HttpIssueMiner {
         return null;
     }
 
-    private boolean pegarDadosIssue(Issue issue, String[] linhas, int i) {
-        if (linhas[i].contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
+    private boolean pegarDadosIssue(Issue issue, List<String> linhas, int i) {
+        if (linhas.get(i).contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
             inexistentes++;
             System.err.println("---------------------------------------------\n");
             System.err.println("A página de Issue não existe");
             System.err.println("---------------------------------------------\n");
             writeToFile(logFile, "- A Issue " + (numeroProximaPagina - 1) + " não existe, por isso não pode ser cadastrada.");
             return false;
-        } else if (linhas[i].contains("environment-val")) { // pega ENVIRONMENT
+        } else if (linhas.get(i).contains("environment-val")) { // pega ENVIRONMENT
             issue.setAmbiente(pegaAmbiente(linhas, i));
-        } else if (linhas[i].contains("issue_header_summary")) { // pega NAME
-            issue.setNome(pegaNome(linhas[i]));
-        } else if (linhas[i].contains("type-val")
-                && linhas[i].contains("class=\"value\"")
-                && linhas[i].contains("<span")) { // pega TIPO
-            issue.setTipo(pegaTipo(linhas[i + 2]));
-        } else if (linhas[i].contains("versions-val")) { // pega VERSAO AFETADA
+        } else if (linhas.get(i).contains("issue_header_summary")) { // pega NAME
+            issue.setNome(pegaNome(linhas.get(i)));
+        } else if (linhas.get(i).contains("type-val")
+                && linhas.get(i).contains("class=\"value\"")
+                && linhas.get(i).contains("<span")) { // pega TIPO
+            issue.setTipo(pegaTipo(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("versions-val")) { // pega VERSAO AFETADA
             issue.setVersoesAfetadas(pegaVersoes(linhas, i));
-        } else if (linhas[i].contains("status-val")) { // pega STATUS
-            issue.setStatus(pegaStatus(linhas[i + 2]));
-        } else if (linhas[i].contains("resolution-val")) { // pega RESOLUCAO
-            issue.setResolucao(pegaResolucao(linhas[i + 1]));
-        } else if (linhas[i].contains("fixfor-val")) { // pega VERSAO FIXADA
+        } else if (linhas.get(i).contains("status-val")) { // pega STATUS
+            issue.setStatus(pegaStatus(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("resolution-val")) { // pega RESOLUCAO
+            issue.setResolucao(pegaResolucao(linhas.get(i + 1)));
+        } else if (linhas.get(i).contains("fixfor-val")) { // pega VERSAO FIXADA
             issue.setVersoesFixadas(pegaVersoes(linhas, i));
-        } else if (linhas[i].contains("assignee-val")) { // pega ASSIGNEE
+        } else if (linhas.get(i).contains("assignee-val")) { // pega ASSIGNEE
             issue.setAssignee(pegaLogin(linhas, i));
-        } else if (linhas[i].contains("reporter-val")) { // pega REPORTER
+        } else if (linhas.get(i).contains("reporter-val")) { // pega REPORTER
             issue.setReporter(pegaLogin(linhas, i));
-        } else if (linhas[i].contains("priority-val")) { // pega PRIORIDADE
-            issue.setPrioridade(pegaPrioridade(linhas[i + 2]));
-        } else if (linhas[i].contains("components-val")) { // pega COMPONENTES
+        } else if (linhas.get(i).contains("priority-val")) { // pega PRIORIDADE
+            issue.setPrioridade(pegaPrioridade(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("components-val")) { // pega COMPONENTES
             issue.setComponentes(pegaComponentes(linhas, i));
-        } else if (linhas[i].contains("create-date")) { // pega DATA CRIADA
-            issue.setDataCriada(pegaData(linhas[i + 1]));
-        } else if (linhas[i].contains("resolved-date")) { // pega DATA RESOLVIDA
-            issue.setDataResolvida(pegaData(linhas[i + 1]));
+        } else if (linhas.get(i).contains("create-date")) { // pega DATA CRIADA
+            issue.setDataCriada(pegaData(linhas.get(i + 1)));
+        } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
+            issue.setDataResolvida(pegaData(linhas.get(i + 1)));
         }
 
         return true;
@@ -212,19 +189,19 @@ public class HttpIssueMiner {
         return data;
     }
 
-    private String pegaComponentes(String[] linhas, int i) {
+    private String pegaComponentes(List<String> linhas, int i) {
 //    <span id="components-val" class="value">
 //        <span class="shorten" id="components-field">
 //              <a href="/jira/browse/LUCENE/component/12311546" title="general/build issues with building Lucene using the ANT build scripts">general/build</a> 
         String componentes = "";
         try {
-            if (linhas[i + 1].contains("None")) {
+            if (linhas.get(i + 1).contains("None")) {
                 componentes = "None";
             } else {
                 String linha = "";
                 int j = i + 2;
-                while (!linhas[j].contains("</div>")) {
-                    linha += linhas[j];
+                while (!linhas.get(j).contains("</div>")) {
+                    linha += linhas.get(j);
                     j++;
                 }
                 if (linha.contains(">,")) {
@@ -241,7 +218,7 @@ public class HttpIssueMiner {
             System.out.println("------------------------------------------------");
         } catch (Exception ex) {
             System.err.println("----- Erro ao capturar Componente da Issue -----");
-            System.err.println(linhas[i + 2]);
+            System.err.println(linhas.get(i + 2));
             ex.printStackTrace();
             System.err.println("------------------------------------------------");
         }
@@ -275,14 +252,14 @@ public class HttpIssueMiner {
         return prioridade;
     }
 
-    private String pegaLogin(String[] linhas, int i) {
+    private String pegaLogin(List<String> linhas, int i) {
 //        <a class="user-hover" rel="jdillon" id="issue_summary_assignee_jdillon" href="/jira/secure/ViewProfile.jspa?name=jdillon">Jason Dillon</a>
         String login = "";
         try {
-            if (!linhas[i + 1].contains("<a")) {
+            if (!linhas.get(i + 1).contains("<a")) {
                 login = "unassigned";
             } else {
-                String[] partes = linhas[i + 1].split("rel=\"");
+                String[] partes = linhas.get(i + 1).split("rel=\"");
                 partes = partes[1].split("\"");
                 login = partes[0];
             }
@@ -329,17 +306,17 @@ public class HttpIssueMiner {
         return status;
     }
 
-    private String pegaVersoes(String[] linhas, int i) {
+    private String pegaVersoes(List<String> linhas, int i) {
         //    <span title="2.4 ">2.4</span>,                                                            <span title="2.9 Last release (barring major bugs) before migrating to 3.0 and JDK 1.5">2.9</span>                                                    </span>
         String versoes = "";
         try {
-            if (linhas[i + 1].contains("None")) {
+            if (linhas.get(i + 1).contains("None")) {
                 versoes = "None";
             } else {
                 String linha = "";
                 int j = i + 2;
-                while (!linhas[j].contains("</div>")) {
-                    linha += linhas[j];
+                while (!linhas.get(j).contains("</div>")) {
+                    linha += linhas.get(j);
                     j++;
                 }
                 if (linha.contains(">,")) {
@@ -356,7 +333,7 @@ public class HttpIssueMiner {
             System.out.println("------------------------------------------------");
         } catch (Exception ex) {
             System.err.println("------ Erro ao capturar Versoes da Issue -------");
-            System.err.println(linhas[i]);
+            System.err.println(linhas.get(i));
             ex.printStackTrace();
             System.err.println("------------------------------------------------");
         }
@@ -411,7 +388,7 @@ public class HttpIssueMiner {
         return nome;
     }
 
-    private String pegaAmbiente(String[] linhas, int i) {
+    private String pegaAmbiente(List<String> linhas, int i) {
 //          <div id="environment-val" class="value">
 //             <p>jdk 1.5.0_13<br/>
 //               ant 1.7.1<br/>
@@ -419,8 +396,8 @@ public class HttpIssueMiner {
         String ambiente = "";
         i++;
         try {
-            while (!linhas[i].contains("</div>")) {
-                String linha = linhas[i].trim();
+            while (!linhas.get(i).contains("</div>")) {
+                String linha = linhas.get(i).trim();
                 linha = linha.replaceAll("<p>", "");
                 linha = linha.replaceAll("</p>", "");
                 linha = linha.replaceAll("<br/>", "\n");
@@ -438,9 +415,9 @@ public class HttpIssueMiner {
         return ambiente;
     }
 
-    private void lerComentarios(Issue issue, String[] linhas) {
-        for (int i = 0; i < linhas.length; i++) {
-            if (linhas[i].contains("action-body flooded")) {
+    private void lerComentarios(Issue issue, List<String> linhas) {
+        for (int i = 0; i < linhas.size(); i++) {
+            if (linhas.get(i).contains("action-body flooded")) {
                 Comentario comentario = pegarComentario(linhas, i);
                 if (comentario != null && AllProjectsMiner.daoProjeto.insere(comentario)) {
                     issue.addComentario(comentario);
@@ -471,18 +448,18 @@ public class HttpIssueMiner {
         linhas = null;
     }
 
-    private Comentario pegarComentario(String[] linhas, int i) {
+    private Comentario pegarComentario(List<String> linhas, int i) {
         Comentario comentario = new Comentario();
         comentario.setAutor(pegaLogin(linhas, i - 3));
-        comentario.setDataComentario(pegaData(linhas[i - 1]));
-        comentario.setHoraComentario(pegaHora(linhas[i - 1]));
-        String linha = linhas[i];
+        comentario.setDataComentario(pegaData(linhas.get(i - 1)));
+        comentario.setHoraComentario(pegaHora(linhas.get(i - 1)));
+        String linha = linhas.get(i);
         String coment = "";
         while (!linha.contains("twixi-wrap concise actionContainer")) {
             if (!linha.trim().isEmpty()) {
                 coment += linha.replaceAll("<div class=\"action-body flooded\">", "") + "\n";
             }
-            linha = linhas[i++];
+            linha = linhas.get(i++);
         }
         try {
             comentario.setComentario(URLEncoder.encode(coment, "UTF-8"));
@@ -510,12 +487,12 @@ public class HttpIssueMiner {
         return hora;
     }
 
-    private void lerCommits(Issue issue, String[] linhas) {
-        for (int i = 0; i < linhas.length; i++) {
-            System.out.println(linhas[i]);
-            if (linhas[i].contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>Repository</b></td>")) {
+    private void lerCommits(Issue issue, List<String> linhas) {
+        for (int i = 0; i < linhas.size(); i++) {
+            if (linhas.get(i).contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>User</b></td>")) {
                 Commits commit = pegarCommit(linhas, i);
                 if (commit != null && AllProjectsMiner.daoProjeto.insere(commit)) {
+                    leiArquivosModificados(commit, linhas, i + 13);
                     issue.addCommit(commit);
                     if (AllProjectsMiner.daoProjeto.atualiza(issue)) {
                         System.err.println("\n--------- Commit Cadastrado e adicioado a Issue ---------");
@@ -544,33 +521,29 @@ public class HttpIssueMiner {
         linhas = null;
     }
 
-    private Commits pegarCommit(String[] linhas, int i) {
+    private Commits pegarCommit(List<String> linhas, int i) {
         Commits commit = new Commits();
-        commit.setRepositorio(pegaRespositorio(linhas[i + 7]));
-        commit.setnRevisao(pegaRevisao(linhas[i + 8]));
-        commit.setDataHora(pegaDataHoraCommit(linhas[i + 9]));
-        commit.setAutor(pegaLoginCommit(linhas[i + 10]));
-        leiArquivosModificados(commit, linhas, i + 16);
+        commit.setRepositorio(pegaRespositorio(linhas.get(i + 4)));
+        commit.setnRevisao(pegaRevisao(linhas.get(i + 5)));
+        commit.setDataHora(pegaDataHoraCommit(linhas.get(i + 6)));
+        commit.setAutor(pegaLoginCommit(linhas.get(i + 7)));
         return commit;
     }
 
-    private void leiArquivosModificados(Commits commit, String[] linhas, int i) {
-        while (!linhas[i].contains("</table>")) {
-            ArquivoModificado arquivo = null;;
-            if (linhas[i].contains("<font ") && linhas[i].contains("<b ")) {
-                while (!linhas[i].contains("<br>")) {
-                    arquivo = new ArquivoModificado();
-                    arquivo.setAcao(pegaAcaoArquivoModificado(linhas[i]));
-                    arquivo.setUrl(pegaURLArquivoModificado(linhas[i + 1]));
-                    arquivo.setNome(pegaNomeArquivoModificado(linhas[i + 1]));
-                    i++;
+    private void leiArquivosModificados(Commits commit, List<String> linhas, int i) {
+        while (!linhas.get(i).contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>Repository</b></td>")
+                && !linhas.get(i).contains("</table>")) {
+            if (linhas.get(i).contains("<font ") && linhas.get(i).contains("<b ")) {
+                ArquivoModificado arquivo = new ArquivoModificado();
+                arquivo.setAcao(pegaAcaoArquivoModificado(linhas.get(i)));
+                arquivo.setUrl(pegaURLArquivoModificado(linhas.get(i + 1)));
+                arquivo.setNome(pegaNomeArquivoModificado(linhas.get(i + 1)));
+                if (AllProjectsMiner.daoProjeto.insere(arquivo)) {
+                    commit.addArquivoModificado(arquivo);
                 }
+                arquivo = null;
             }
-            if (arquivo != null) {
-                commit.addArquivoModificado(arquivo);
-            }else{
-                i++;
-            }
+            i++;
         }
     }
 
@@ -741,16 +714,14 @@ public class HttpIssueMiner {
         return true;
     }
 
-    private String[] capturarCodigoHtml(BufferedReader dis) throws Exception {
-        StringBuilder sb = new StringBuilder();
+    private List<String> capturarCodigoHtml(BufferedReader dis) throws Exception {
+        List<String> linhas = new ArrayList<String>();
         String linha = dis.readLine();
         while (!linha.trim().equals("</html>")) {
-            sb.append(linha);
-            sb.append("\n");
+            linhas.add(linha);
             linha = dis.readLine();
         }
-        sb.append(linha);
         dis = null;
-        return sb.toString().split("\n");
+        return linhas;
     }
 }

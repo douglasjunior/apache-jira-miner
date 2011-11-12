@@ -5,8 +5,10 @@
     <class>pojo.Issue</class>
     <class>pojo.Projeto</class>
     <class>pojo.Comentario</class>
+    <class>pojo.ArquivoModificado</class>
+    <class>pojo.Commits</class>
     <properties>
-      <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/geronimodois"/>
+      <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/geronimo"/>
       <property name="javax.persistence.jdbc.password" value="aluno"/>
       <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
       <property name="javax.persistence.jdbc.user" value="aluno"/>
