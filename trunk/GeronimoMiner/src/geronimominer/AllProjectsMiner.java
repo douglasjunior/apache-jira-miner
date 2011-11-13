@@ -31,19 +31,19 @@ public class AllProjectsMiner {
          * não tem problema rodar este método várias vezes pois não cadastrará projetos repetidos
         
          * 
-         
+        
         
         conectarDao();
         HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
         try {
-            httpProjetos.minerarProjetos();
+        httpProjetos.minerarProjetos();
         } catch (Exception ex) {
-            ex.printStackTrace();
+        ex.printStackTrace();
         }
         fecharConexao();
-
-
-
+        
+        
+        
         /*
          * este método percorrerá todos os projetos cadastrados e irá minerar suas Issues e comentários
          */
@@ -51,7 +51,7 @@ public class AllProjectsMiner {
             conectarDao();
             Projeto projeto = (Projeto) daoProjeto.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaIniciado(projeto)) {
-                HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, 1);
+                HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, 1, true, true);
                 try {
                     httpIssues.minerarIssues();
                 } catch (Exception ex) {

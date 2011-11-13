@@ -24,9 +24,9 @@ public class IndividualProjectMiner {
 
         Projeto projeto = AllProjectsMiner.consultaPorKey("LUCENE");
         int proximaPagina = 1457;
-        
+
         if (projeto != null) {
-            HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina);
+            HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina, true, true);
             try {
                 httpIssues.minerarIssues();
             } catch (Exception ex) {
