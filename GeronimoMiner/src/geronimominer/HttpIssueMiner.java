@@ -53,7 +53,13 @@ public class HttpIssueMiner {
         System.out.println("-----------------------------------------\n");
         writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
 
+        int contadorGC = 0;
+
         while (inexistentes <= 40) {
+            if (contadorGC >= 50) {
+                System.gc();
+                contadorGC = 0;
+            }
             System.out.println("---- Conectando a URL : " + getUrl());
             URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
             URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
@@ -67,6 +73,7 @@ public class HttpIssueMiner {
             urlCommmits = null;
             disComentarios = null;
             disCommits = null;
+            contadorGC++;
         }
 
         writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
@@ -107,23 +114,23 @@ public class HttpIssueMiner {
                     System.err.println("Nome: " + issue.getNome());
                     System.err.println("Numero: " + issue.getNumeroIssue());
                     System.err.println("----------------------------------------------------------\n");
-                    writeToFile(logFile, "- Issue " + (numeroProximaPagina - 1) + " cadastrada e adicionado ao projeto.");
+                    writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " cadastrada e adicionado ao projeto.");
                 } else {
                     projeto.removeIssue(issue);
                     System.err.println("----- Issue cadastrado e *NÃO* adicionado ao Projeto -----");
                     System.err.println("Nome: " + issue.getNome());
                     System.err.println("Numero: " + issue.getNumeroIssue());
-                    writeToFile(logFile, "- Issue " + (numeroProximaPagina - 1) + " cadastrada.");
+                    writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " cadastrada.");
                     System.err.println("----------------------------------------------------------\n");
                 }
                 return issue;
             }
             if (!inseriu) {
                 System.err.println("---------------- Erro ao cadastrar Issue ----------------");
-                System.err.println("Nome: " + issue.getNome());
-                System.err.println("Numero: " + issue.getNumeroIssue());
+                System.err.println("Link: " + getUrl());
+                System.err.println("Numero: " + numeroProximaPagina);
                 System.err.println("----------------------------------------------------------\n");
-                writeToFile(logFile, "- Erro: Issue " + (numeroProximaPagina - 1) + " não foi cadastrada.");
+                writeToFile(logFile, "- Erro: Issue " + numeroProximaPagina + " não foi cadastrada.");
             }
         }
         return null;
