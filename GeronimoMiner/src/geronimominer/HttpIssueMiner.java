@@ -34,14 +34,18 @@ public class HttpIssueMiner {
     private Projeto projeto;
     private String logFile;
     private int inexistentes;
+    public boolean minerarComentarios;
+    public boolean minerarCommits;
 
     public HttpIssueMiner() {
     }
 
-    public HttpIssueMiner(Projeto projeto, int numeroProximaPagina) {
+    public HttpIssueMiner(Projeto projeto, int numeroProximaPagina, boolean minerarComentarios, boolean minerarCommits) {
         this.projeto = projeto;
         this.numeroProximaPagina = numeroProximaPagina;
         this.logFile = "src/" + projeto.getxKey();
+        this.minerarComentarios = minerarComentarios;
+        this.minerarCommits = minerarCommits;
         inexistentes = 0;
     }
 
@@ -86,9 +90,13 @@ public class HttpIssueMiner {
 
     private void lerPaginasHtmls(List<String> linhasComentarios, List<String> linhasCommits) throws Exception {
         Issue issue = lerIssue(linhasComentarios);
-        if (issue != null) {
-            lerComentarios(issue, linhasComentarios);
-            lerCommits(issue, linhasCommits);
+        if (issue != null && issue.getId() != 0) {
+            if (minerarComentarios) {
+                lerComentarios(issue, linhasComentarios);
+            }
+            if (minerarCommits) {
+                lerCommits(issue, linhasCommits);
+            }
         }
         issue = null;
         linhasComentarios = null;
