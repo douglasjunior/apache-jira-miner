@@ -82,8 +82,13 @@ public class HttpIssueMiner {
             URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
             BufferedReader disCommits = Util.abrirStream(urlCommmits);
             System.out.println("---- Conectado a URL : " + getUrl());
-
-            lerCommits(issue, capturarCodigoHtml(disCommits));
+            try {
+                lerCommits(issue, capturarCodigoHtml(disCommits));
+                writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue() + "\n");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                writeToFile(logFile, "*Erro ao minerar commits da issue: " + issue.getNumeroIssue() + "*\n");
+            }
             disCommits.close();
 
             System.err.println("--------- Concluido a mineração dos Commits da Issues ---------");
