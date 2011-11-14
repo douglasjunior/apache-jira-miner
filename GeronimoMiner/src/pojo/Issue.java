@@ -33,11 +33,11 @@ public class Issue implements Serializable {
     @OneToMany(mappedBy = "issue", orphanRemoval = true, cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
     @JoinColumn(name = "ISSUE_ID")
     private List<Comentario> comentarios;
-    @Column(length = 1000)
+    @Column(columnDefinition = "LONGTEXT")
     private String versoesAfetadas;
     @Column(columnDefinition = "LONGTEXT")
     private String componentes;
-    @Column(length = 1000)
+    @Column(columnDefinition = "LONGTEXT")
     private String versoesFixadas;
     @Column(length = 50)
     private String tipo;

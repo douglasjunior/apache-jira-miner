@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Date;
 import pojo.Projeto;
+import util.Conn;
 import util.Util;
 
 /**
@@ -98,7 +99,7 @@ public class HttpProjetosMiner {
             }
             linha = dis.readLine();
         }
-        if (AllProjectsMiner.daoProjeto.insere(projeto)) {
+        if (Conn.daoProjeto.insere(projeto)) {
             writeToFile(logFile, "Registrado projeto: " + projeto.getNome());
         } else {
             writeToFile(logFile, "Erro ao gravar projeto: " + projeto.getNome());
