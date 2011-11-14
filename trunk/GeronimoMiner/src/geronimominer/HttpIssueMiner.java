@@ -56,6 +56,10 @@ public class HttpIssueMiner {
     }
 
     public void atualizarCommits() throws Exception {
+        atualizarCommits(0);
+    }
+
+    public void atualizarCommits(int numeroIssueInicial) throws Exception {
         this.logFile += ".commit";
 
         System.out.println("");
@@ -67,39 +71,40 @@ public class HttpIssueMiner {
         int contadorGC = 0;
 
         for (Issue issue : projeto.getIssues()) {
-            if (contadorGC >= 50) {
-                contadorGC = 0;
-                System.gc();
+            if (issue.getNumeroIssue() >= numeroIssueInicial) {
+                if (contadorGC >= 50) {
+                    contadorGC = 0;
+                    System.gc();
+                }
+                System.err.println("--------- Iniciando a mineração dos Commits da Issues ---------");
+                System.err.println("Issue: " + getUrl());
+                System.err.println("---------------------------------------------------------------\n");
+
+                this.numeroProximaPagina = issue.getNumeroIssue();
+                
+                System.out.println("---- Conectando a URL : " + getUrl());
+                URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
+                BufferedReader disCommits = Util.abrirStream(urlCommmits);
+                System.out.println("---- Conectado a URL : " + getUrl());
+                try {
+                    lerCommits(issue, capturarCodigoHtml(disCommits));
+                    writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    writeToFile(logFile, "*Erro ao minerar commits da issue: " + issue.getNumeroIssue() + "*");
+                }
+                disCommits.close();
+
+                System.err.println("--------- Concluido a mineração dos Commits da Issues ---------");
+                System.err.println("Issue: " + getUrl());
+                System.err.println("---------------------------------------------------------------\n");
+
+                disCommits = null;
+                urlCommmits = null;
+                issue = null;
+
+                contadorGC++;
             }
-
-            this.numeroProximaPagina = issue.getNumeroIssue();
-
-            System.err.println("--------- Iniciando a mineração dos Commits da Issues ---------");
-            System.err.println("Issue: " + getUrl());
-            System.err.println("---------------------------------------------------------------\n");
-
-            System.out.println("---- Conectando a URL : " + getUrl());
-            URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
-            BufferedReader disCommits = Util.abrirStream(urlCommmits);
-            System.out.println("---- Conectado a URL : " + getUrl());
-            try {
-                lerCommits(issue, capturarCodigoHtml(disCommits));
-                writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue() + "\n");
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                writeToFile(logFile, "*Erro ao minerar commits da issue: " + issue.getNumeroIssue() + "*\n");
-            }
-            disCommits.close();
-
-            System.err.println("--------- Concluido a mineração dos Commits da Issues ---------");
-            System.err.println("Issue: " + getUrl());
-            System.err.println("---------------------------------------------------------------\n");
-
-            disCommits = null;
-            urlCommmits = null;
-            issue = null;
-
-            contadorGC++;
         }
 
         writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
