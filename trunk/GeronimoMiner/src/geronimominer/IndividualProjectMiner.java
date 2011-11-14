@@ -5,6 +5,7 @@
 package geronimominer;
 
 import pojo.Projeto;
+import util.Conn;
 
 /**
  *
@@ -13,7 +14,7 @@ import pojo.Projeto;
 public class IndividualProjectMiner {
 
     public static void main(String[] args) {
-        AllProjectsMiner.conectarDao();
+        Conn.conectarDao();
 
 //        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
 //        try {
@@ -22,7 +23,7 @@ public class IndividualProjectMiner {
 //            ex.printStackTrace();
 //        }
 
-        Projeto projeto = AllProjectsMiner.consultaPorKey("LUCENE");
+        Projeto projeto = Conn.consultaPorKey("LUCENE");
         int proximaPagina = 1457;
 
         if (projeto != null) {

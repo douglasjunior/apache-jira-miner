@@ -22,6 +22,7 @@ import pojo.Comentario;
 import pojo.Commits;
 import pojo.Issue;
 import pojo.Projeto;
+import util.Conn;
 import util.Util;
 
 /**
@@ -38,15 +39,70 @@ public class HttpIssueMiner {
     public boolean minerarCommits;
 
     public HttpIssueMiner() {
+        this.inexistentes = 0;
+    }
+
+    public HttpIssueMiner(Projeto projeto) {
+        this();
+        this.logFile = "src/" + projeto.getxKey();
+        this.projeto = projeto;
     }
 
     public HttpIssueMiner(Projeto projeto, int numeroProximaPagina, boolean minerarComentarios, boolean minerarCommits) {
-        this.projeto = projeto;
+        this(projeto);
         this.numeroProximaPagina = numeroProximaPagina;
-        this.logFile = "src/" + projeto.getxKey();
         this.minerarComentarios = minerarComentarios;
         this.minerarCommits = minerarCommits;
-        inexistentes = 0;
+    }
+
+    public void atualizarCommits() throws Exception {
+        this.logFile += ".commit";
+
+        System.out.println("");
+        System.out.println("----------------------------------------------");
+        System.out.println("Iniciando a mineração dos Commits das Issues");
+        System.out.println("----------------------------------------------\n");
+        writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+
+        int contadorGC = 0;
+
+        for (Issue issue : projeto.getIssues()) {
+            if (contadorGC >= 50) {
+                contadorGC = 0;
+                System.gc();
+            }
+
+            this.numeroProximaPagina = issue.getNumeroIssue();
+
+            System.err.println("--------- Iniciando a mineração dos Commits da Issues ---------");
+            System.err.println("Issue: " + getUrl());
+            System.err.println("---------------------------------------------------------------\n");
+
+            System.out.println("---- Conectando a URL : " + getUrl());
+            URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
+            BufferedReader disCommits = Util.abrirStream(urlCommmits);
+            System.out.println("---- Conectado a URL : " + getUrl());
+
+            lerCommits(issue, capturarCodigoHtml(disCommits));
+            disCommits.close();
+
+            System.err.println("--------- Concluido a mineração dos Commits da Issues ---------");
+            System.err.println("Issue: " + getUrl());
+            System.err.println("---------------------------------------------------------------\n");
+
+            disCommits = null;
+            urlCommmits = null;
+            issue = null;
+
+            contadorGC++;
+        }
+
+        writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        System.out.println("----------------------------------------------");
+        System.out.println("Terminado a mineração dos Commits das Issues");
+        System.out.println("----------------------------------------------\n");
+
+        projeto = null;
     }
 
     public void minerarIssues() throws Exception {
@@ -116,8 +172,8 @@ public class HttpIssueMiner {
             inexistentes = 0;
             boolean inseriu = false;
             projeto.addIssue(issue);
-            if (AllProjectsMiner.daoProjeto.insere(issue)) {
-                if (AllProjectsMiner.daoProjeto.atualiza(projeto)) {
+            if (Conn.daoProjeto.insere(issue)) {
+                if (Conn.daoProjeto.atualiza(projeto)) {
                     System.err.println("-------- Issue cadastrado e adicionado ao Projeto --------");
                     System.err.println("Nome: " + issue.getNome());
                     System.err.println("Numero: " + issue.getNumeroIssue());
@@ -434,9 +490,9 @@ public class HttpIssueMiner {
         for (int i = 0; i < linhas.size(); i++) {
             if (linhas.get(i).contains("action-body flooded")) {
                 Comentario comentario = pegarComentario(linhas, i);
-                if (comentario != null && AllProjectsMiner.daoProjeto.insere(comentario)) {
+                if (comentario != null && Conn.daoProjeto.insere(comentario)) {
                     issue.addComentario(comentario);
-                    if (AllProjectsMiner.daoProjeto.atualiza(issue)) {
+                    if (Conn.daoProjeto.atualiza(issue)) {
                         System.err.println("\n--------- Comentário Cadastrado e adicioado a Issue ---------");
                         System.err.println("Autor: " + comentario.getAutor());
                         System.err.println("Data: " + comentario.getDataComentario() + " / " + comentario.getHoraComentario());
@@ -474,7 +530,8 @@ public class HttpIssueMiner {
             if (!linha.trim().isEmpty()) {
                 coment += linha.replaceAll("<div class=\"action-body flooded\">", "") + "\n";
             }
-            linha = linhas.get(i++);
+            i++;
+            linha = linhas.get(i);
         }
         try {
             comentario.setComentario(URLEncoder.encode(coment, "UTF-8"));
@@ -506,10 +563,10 @@ public class HttpIssueMiner {
         for (int i = 0; i < linhas.size(); i++) {
             if (linhas.get(i).contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>User</b></td>")) {
                 Commits commit = pegarCommit(linhas, i);
-                if (commit != null && AllProjectsMiner.daoProjeto.insere(commit)) {
+                if (commit != null && Conn.daoProjeto.insere(commit)) {
                     leiArquivosModificados(commit, linhas, i + 13);
                     issue.addCommit(commit);
-                    if (AllProjectsMiner.daoProjeto.atualiza(issue)) {
+                    if (Conn.daoProjeto.atualiza(issue)) {
                         System.err.println("\n--------- Commit Cadastrado e adicioado a Issue ---------");
                         System.err.println("Autor: " + commit.getAutor());
                         System.err.println("Data: " + commit.getDataHora());
@@ -542,8 +599,33 @@ public class HttpIssueMiner {
         commit.setnRevisao(pegaRevisao(linhas.get(i + 5)));
         commit.setDataHora(pegaDataHoraCommit(linhas.get(i + 6)));
         commit.setAutor(pegaLoginCommit(linhas.get(i + 7)));
-        commit.setMensagem(linhas.get(i + 8)); // pega mensagem com tags html por nao seguir um padrao
+        commit.setMensagem(pegaMensagemCommit(linhas, i + 8)); // pega mensagem com tags html por nao seguir um padrao
         return commit;
+    }
+
+    private String pegaMensagemCommit(List<String> linhas, int i) {
+//       <td bgcolor="#ffffff">    Add missing license for <a href="/jira/browse/IVY-1" title="use MBeans do find projects"><strike>IVY-1</strike></a>.4.1<br/>
+//   Issue: <a href="/jira/browse/FOR-855" title="verify the license situation prior to each release">FOR-855</a>
+//   </td>
+        String mensagem = "";
+        String linha = "";
+        try {
+            linha = linhas.get(i);
+            while (!linha.contains("</tr>")) {
+                mensagem += linha;
+                i++;
+                linha = linhas.get(i);
+            }
+            System.out.println("--------- Capturado Mensagem do Commit ---------");
+            System.out.println("Mensagem: " + mensagem);
+            System.out.println("------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("------ Erro ao capturar Mensagem do Commit -----");
+            System.err.println(linha);
+            ex.printStackTrace();
+            System.err.println("------------------------------------------------");
+        }
+        return mensagem;
     }
 
     private void leiArquivosModificados(Commits commit, List<String> linhas, int i) {
@@ -554,7 +636,7 @@ public class HttpIssueMiner {
                 arquivo.setAcao(pegaAcaoArquivoModificado(linhas.get(i)));
                 arquivo.setUrl(pegaURLArquivoModificado(linhas.get(i + 1)));
                 arquivo.setNome(pegaNomeArquivoModificado(linhas.get(i + 1)));
-                if (AllProjectsMiner.daoProjeto.insere(arquivo)) {
+                if (Conn.daoProjeto.insere(arquivo)) {
                     commit.addArquivoModificado(arquivo);
                 }
                 arquivo = null;

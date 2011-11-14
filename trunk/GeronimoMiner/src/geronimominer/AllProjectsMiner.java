@@ -4,23 +4,15 @@
  */
 package geronimominer;
 
-import dao.DAO;
 import java.io.File;
-import java.util.List;
-import javax.persistence.Persistence;
 import pojo.Projeto;
+import util.Conn;
 
 /**
  *
  * @author Douglas
  */
 public class AllProjectsMiner {
-
-    public static DAO daoProjeto;
-
-    public static void conectarDao() {
-        daoProjeto = new DAO(Persistence.createEntityManagerFactory("HttpMineratorPU").createEntityManager());
-    }
 
     public static void main(String[] args) {
 
@@ -48,8 +40,8 @@ public class AllProjectsMiner {
          * este método percorrerá todos os projetos cadastrados e irá minerar suas Issues e comentários
          */
         for (int i = 1; i <= 400; i++) {
-            conectarDao();
-            Projeto projeto = (Projeto) daoProjeto.buscaIDint(Projeto.class, i);
+            Conn.conectarDao();
+            Projeto projeto = (Projeto) Conn.daoProjeto.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaIniciado(projeto)) {
                 HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, 1, true, true);
                 try {
@@ -60,7 +52,7 @@ public class AllProjectsMiner {
                 httpIssues = null;
             }
             projeto = null;
-            fecharConexao();
+            Conn.fecharConexao();
             System.gc();
         }
 
@@ -77,20 +69,5 @@ public class AllProjectsMiner {
             }
         }
         return false;
-    }
-
-    public static Projeto consultaPorKey(String key) {
-        List<Projeto> pjts = daoProjeto.selecionaComParametros("SELECT p FROM Projeto p WHERE p.xKey = :key",
-                new String[]{"key"},
-                new Object[]{key});
-        if (pjts.size() == 1) {
-            return pjts.get(0);
-        }
-        return null;
-    }
-
-    private static void fecharConexao() {
-        daoProjeto.fecharConexao();
-        daoProjeto = null;
     }
 }
