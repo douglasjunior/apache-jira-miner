@@ -23,8 +23,9 @@ public class ArquivoModificado implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+    @Column(columnDefinition = "TEXT")
     private String nome;
-    @Column(columnDefinition="TEXT")
+    @Column(columnDefinition = "TEXT")
     private String url;
     private String acao;
     @ManyToOne
