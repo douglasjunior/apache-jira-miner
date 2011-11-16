@@ -76,11 +76,12 @@ public class HttpIssueMiner {
                     contadorGC = 0;
                     System.gc();
                 }
+                
+                this.numeroProximaPagina = issue.getNumeroIssue();
+                
                 System.err.println("--------- Iniciando a mineração dos Commits da Issues ---------");
                 System.err.println("Issue: " + getUrl());
                 System.err.println("---------------------------------------------------------------\n");
-
-                this.numeroProximaPagina = issue.getNumeroIssue();
                 
                 System.out.println("---- Conectando a URL : " + getUrl());
                 URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
