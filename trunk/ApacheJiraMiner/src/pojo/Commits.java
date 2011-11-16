@@ -33,7 +33,7 @@ public class Commits implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String mensagem;
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date dataHora;
