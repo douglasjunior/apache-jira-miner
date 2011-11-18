@@ -76,13 +76,13 @@ public class HttpIssueMiner {
                     contadorGC = 0;
                     System.gc();
                 }
-                
+
                 this.numeroProximaPagina = issue.getNumeroIssue();
-                
+
                 System.err.println("--------- Iniciando a mineração dos Commits da Issues ---------");
                 System.err.println("Issue: " + getUrl());
                 System.err.println("---------------------------------------------------------------\n");
-                
+
                 System.out.println("---- Conectando a URL : " + getUrl());
                 URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
                 BufferedReader disCommits = Util.abrirStream(urlCommmits);
@@ -244,22 +244,31 @@ public class HttpIssueMiner {
         } else if (linhas.get(i).contains("components-val")) { // pega COMPONENTES
             issue.setComponentes(pegaComponentes(linhas, i));
         } else if (linhas.get(i).contains("create-date")) { // pega DATA CRIADA
-            issue.setDataCriada(pegaData(linhas.get(i + 1)));
+            issue.setDataCriada(pegaData(linhas.get(i)));
         } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
-            issue.setDataResolvida(pegaData(linhas.get(i + 1)));
+            issue.setDataResolvida(pegaData(linhas.get(i)));
         }
 
         return true;
     }
 
     private Date pegaData(String linha) {
-//                        <time datetime="2008-11-18T10:31+0000">18/Nov/08 10:31</time></dd>                     </dd>
+//<dd id="create-date" class="date user-tz"  title="18/Nov/08 10:31" >
 // added a comment  - <span class='commentdate_12648727_verbose subText'><span class='date user-tz' title='18/Nov/08 19:52'><time datetime='2008-11-18T19:52+0000'>18/Nov/08 19:52</time></span></span>  </div>
         Date data = null;
         try {
-            String[] partes = linha.split("datetime=");
-            partes = partes[1].split("T");
-            data = Util.stringToDate(partes[0].replaceAll("\"", "").replaceAll("'", ""));
+            String[] partes = linha.split("title=");
+            partes = partes[1].split(">");
+            partes[0] = partes[0].replaceAll("\"", "").replaceAll("'", "".trim());
+            DateFormat df = new SimpleDateFormat("dd/MM/yy hh:mm");
+            String[][] meses = new String[][]{{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}, {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}};
+            partes = partes[0].split("/");
+            for (int i = 0; i < meses[0].length; i++) {
+                if (partes[1].equals(meses[0][i])) {
+                    partes[1] = meses[1][i];
+                }
+            }
+            data = df.parse(partes[0] + "/" + partes[1] + "/" + partes[2]);
             System.out.println("----------- Capturado Data da Issue ------------");
             System.out.println("Componente: " + data.toString());
             System.out.println("------------------------------------------------");
@@ -534,7 +543,7 @@ public class HttpIssueMiner {
         Comentario comentario = new Comentario();
         comentario.setAutor(pegaLogin(linhas, i - 3));
         comentario.setDataComentario(pegaData(linhas.get(i - 1)));
-        comentario.setHoraComentario(pegaHora(linhas.get(i - 1)));
+//        comentario.setHoraComentario(pegaHora(linhas.get(i - 1)));
         String linha = linhas.get(i);
         String coment = "";
         while (!linha.contains("twixi-wrap concise actionContainer")) {
