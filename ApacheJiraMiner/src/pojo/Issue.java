@@ -26,9 +26,9 @@ public class Issue implements Serializable {
     private String nome;
     private String assignee;
     private String reporter;
-    @Temporal(javax.persistence.TemporalType.DATE)
+    @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date dataCriada;
-    @Temporal(javax.persistence.TemporalType.DATE)
+    @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date dataResolvida;
     @OneToMany(mappedBy = "issue", orphanRemoval = true, cascade = CascadeType.REFRESH, fetch = FetchType.LAZY)
     @JoinColumn(name = "ISSUE_ID")
