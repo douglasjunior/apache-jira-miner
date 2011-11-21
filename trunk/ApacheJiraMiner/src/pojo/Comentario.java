@@ -22,13 +22,11 @@ public class Comentario implements Serializable {
     private int id;
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date dataComentario;
-    private String horaComentario;
     private String autor;
     @Column(columnDefinition = "LONGTEXT")
     private String comentario;
     @ManyToOne
     private Issue issue;
-
 
     public Comentario() {
     }
@@ -68,15 +66,6 @@ public class Comentario implements Serializable {
     public void setDataComentario(Date dataComentario) {
         this.dataComentario = dataComentario;
     }
-
-    public String getHoraComentario() {
-        return horaComentario;
-    }
-
-    public void setHoraComentario(String horaComentario) {
-        this.horaComentario = horaComentario;
-    }
-
 
     @Override
     public int hashCode() {
@@ -118,8 +107,7 @@ public class Comentario implements Serializable {
     public boolean estaCompleto() {
         if (getAutor() == null
                 || getComentario() == null
-                || getDataComentario() == null
-                || getHoraComentario() == null) {
+                || getDataComentario() == null) {
             return false;
         }
         return true;

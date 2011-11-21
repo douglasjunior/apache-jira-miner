@@ -23,8 +23,11 @@ public class IndividualProjectMiner {
 //            ex.printStackTrace();
 //        }
 
-        Projeto projeto = Conn.consultaPorKey("LUCENE");
-        int proximaPagina = 1457;
+        // FOR,HDFS,MAPREDUCE,TRINIDAD,OFBIZ,XMLBEANS,FLUME,QPID
+
+
+        Projeto projeto = Conn.consultaPorKey("QPID");
+        int proximaPagina = 663;
 
         if (projeto != null) {
             HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina, true, true);

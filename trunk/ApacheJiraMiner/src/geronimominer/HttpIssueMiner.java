@@ -10,13 +10,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
+import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import pojo.ArquivoModificado;
 import pojo.Comentario;
 import pojo.Commits;
@@ -53,6 +56,125 @@ public class HttpIssueMiner {
         this.numeroProximaPagina = numeroProximaPagina;
         this.minerarComentarios = minerarComentarios;
         this.minerarCommits = minerarCommits;
+    }
+
+    public void atualizarDatas() throws Exception {
+        atualizarDatasDasIssuesDoProjeto(0);
+    }
+
+    public void atualizarDatasDasIssuesDoProjeto(int numeroIssueInicial) throws Exception {
+        this.logFile += ".issuedata";
+
+        System.out.println("");
+        System.out.println("----------------------------------------------");
+        System.out.println("Iniciando a mineração das Datas das Issues");
+        System.out.println("----------------------------------------------\n");
+        writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+
+        int contadorGC = 0;
+
+        for (Issue issue : projeto.getIssues()) {
+            if (issue.getNumeroIssue() >= numeroIssueInicial) {
+                if (contadorGC >= 50) {
+                    contadorGC = 0;
+                    System.gc();
+                }
+
+                this.numeroProximaPagina = issue.getNumeroIssue();
+
+                System.err.println("--------- Iniciando a mineração das Datas da Issues ---------");
+                System.err.println("Issue: " + getUrl());
+                System.err.println("---------------------------------------------------------------\n");
+
+                System.out.println("---- Conectando a URL : " + getUrl());
+                URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
+
+                BufferedReader disCommits = Util.abrirStream(urlComentarios);
+                System.out.println("---- Conectado a URL : " + getUrl());
+
+                List<String> linhas = capturarCodigoHtml(disCommits);
+                for (int i = linhas.size() - 300; i < linhas.size(); i++) {
+                    pegarDadosIssue(issue, linhas, i);
+                }
+                if (Conn.daoProjeto.atualiza(issue)) {
+                    writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
+                } else {
+                    writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
+                }
+                disCommits.close();
+
+                System.err.println("--------- Concluido a mineração das Datas da Issues ---------");
+                System.err.println("Issue: " + getUrl());
+                System.err.println("---------------------------------------------------------------\n");
+
+                disCommits = null;
+                urlComentarios = null;
+                issue = null;
+
+                contadorGC++;
+            }
+        }
+
+        writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        System.out.println("----------------------------------------------");
+        System.out.println("Terminado a mineração dos Commits das Issues");
+        System.out.println("----------------------------------------------\n");
+
+        projeto = null;
+
+    }
+
+    public void atualizarDatasDasIssues(List<Issue> issues) throws MalformedURLException, Exception {
+        int contadorGC = 0;
+        for (Issue issue : issues) {
+            if (contadorGC >= 50) {
+                contadorGC = 0;
+                System.gc();
+            }
+
+            this.projeto = issue.getProjeto();
+
+            if (projeto == null) {
+
+                Conn.daoProjeto.remove(issue);
+
+            } else {
+
+                this.logFile = "src/" + projeto.getxKey() + ".issuedata";
+
+                this.numeroProximaPagina = issue.getNumeroIssue();
+
+                System.err.println("--------- Iniciando a mineração das Datas da Issues ---------");
+                System.err.println("Issue: " + getUrl());
+                System.err.println("---------------------------------------------------------------\n");
+
+                System.out.println("---- Conectando a URL : " + getUrl());
+                URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
+
+                BufferedReader disCommits = Util.abrirStream(urlComentarios);
+                System.out.println("---- Conectado a URL : " + getUrl());
+
+                List<String> linhas = capturarCodigoHtml(disCommits);
+                for (int i = linhas.size() - 300; i < linhas.size(); i++) {
+                    pegarDadosIssue(issue, linhas, i);
+                }
+                if (Conn.daoProjeto.atualiza(issue)) {
+                    writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
+                } else {
+                    writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
+                }
+                disCommits.close();
+
+                System.err.println("--------- Concluido a mineração das Datas da Issues ---------");
+                System.err.println("Issue: " + getUrl());
+                System.err.println("---------------------------------------------------------------\n");
+
+                disCommits = null;
+                urlComentarios = null;
+                issue = null;
+            }
+            contadorGC++;
+        }
     }
 
     public void atualizarCommits() throws Exception {
@@ -260,7 +382,7 @@ public class HttpIssueMiner {
             String[] partes = linha.split("title=");
             partes = partes[1].split(">");
             partes[0] = partes[0].replaceAll("\"", "").replaceAll("'", "".trim());
-            DateFormat df = new SimpleDateFormat("dd/MM/yy hh:mm");
+            DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
             String[][] meses = new String[][]{{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}, {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}};
             partes = partes[0].split("/");
             for (int i = 0; i < meses[0].length; i++) {
@@ -268,9 +390,13 @@ public class HttpIssueMiner {
                     partes[1] = meses[1][i];
                 }
             }
+
             data = df.parse(partes[0] + "/" + partes[1] + "/" + partes[2]);
+            
             System.out.println("----------- Capturado Data da Issue ------------");
-            System.out.println("Componente: " + data.toString());
+            System.out.println("Data: " + data.toString());
+            System.out.println("String: " + partes[0] + "/" + partes[1] + "/" + partes[2]);
+            System.out.println("Linha: " + linha);
             System.out.println("------------------------------------------------");
         } catch (Exception ex) {
             System.err.println("-------- Erro ao capturar Data da Issue --------");
@@ -515,20 +641,20 @@ public class HttpIssueMiner {
                     if (Conn.daoProjeto.atualiza(issue)) {
                         System.err.println("\n--------- Comentário Cadastrado e adicioado a Issue ---------");
                         System.err.println("Autor: " + comentario.getAutor());
-                        System.err.println("Data: " + comentario.getDataComentario() + " / " + comentario.getHoraComentario());
+                        System.err.println("Data: " + comentario.getDataComentario());
                         System.err.println("Comentario: " + comentario.getComentario());
                         System.err.println("-----------------------------------------------------------------\n");
                     } else {
                         System.err.println("\n--------- Comentário Cadastrado e *NÃO* adicioado a Issue ---------");
                         System.err.println("Autor: " + comentario.getAutor());
-                        System.err.println("Data: " + comentario.getDataComentario() + " / " + comentario.getHoraComentario());
+                        System.err.println("Data: " + comentario.getDataComentario());
                         System.err.println("Comentario: " + comentario.getComentario());
                         System.err.println("-----------------------------------------------------------------\n");
                     }
                 } else {
                     System.err.println("\n-------- Erro ao Cadastrar Comentario ----------");
                     System.err.println("Autor: " + comentario.getAutor());
-                    System.err.println("Data: " + comentario.getDataComentario() + " / " + comentario.getHoraComentario());
+                    System.err.println("Data: " + comentario.getDataComentario());
                     System.err.println("Comentario: " + comentario.getComentario());
                     System.err.println("-----------------------------------------------------------------\n");
                 }
@@ -724,7 +850,7 @@ public class HttpIssueMiner {
         Date data = null;
         try {
             linha = pegaSomenteConteudo(linha);
-            DateFormat df = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+            DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
             String[][] meses = new String[][]{{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}, {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}};
             String[] partes = linha.split(" ");
             for (int i = 0; i < meses[0].length; i++) {

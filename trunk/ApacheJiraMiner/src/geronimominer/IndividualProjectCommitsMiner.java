@@ -16,8 +16,8 @@ public class IndividualProjectCommitsMiner {
     public static void main(String[] args) {
         Conn.conectarDao();
 
-        Projeto projeto = Conn.consultaPorKey("LUCENE");
-        int proximaPagina = 2010;
+        Projeto projeto = Conn.consultaPorKey("DIRSTUDIO");
+        int proximaPagina = 495;
 
         if (projeto != null) {
             HttpIssueMiner httpIssues = new HttpIssueMiner(projeto);

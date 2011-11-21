@@ -15,7 +15,7 @@ import util.Conn;
 public class AllProjectsCommitsMiner {
 
     public static void main(String[] args) {
-        for (int i = 1; i <= 50; i++) {
+        for (int i = 368; i >= 1; i--) {
             Conn.conectarDao();
             Projeto projeto = (Projeto) Conn.daoProjeto.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaMinerado(projeto)) {

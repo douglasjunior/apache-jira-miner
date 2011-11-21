@@ -18,7 +18,7 @@ import java.util.Date;
  */
 public class Util {
 
-    private static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm");
+    private static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
     
     public static Date stringToDate(String yyyyMMdd) throws ParseException{
         return format.parse(yyyyMMdd);
