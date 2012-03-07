@@ -55,7 +55,7 @@ public class HttpIssueMiner {
      */
     public HttpIssueMiner(Projeto projeto) {
         this();
-        this.logFile += projeto.getxKey();
+        this.logFile += projeto.getxKey() + ".txt";
         this.projeto = projeto;
 
     }
@@ -88,7 +88,7 @@ public class HttpIssueMiner {
      * @throws Exception 
      */
     public void atualizarDatasDasIssuesDoProjeto(int numeroIssueInicial) throws Exception {
-        this.logFile += ".issuedata";
+        this.logFile += ".issuedata.txt";
 
         System.out.println("");
         System.out.println("----------------------------------------------");

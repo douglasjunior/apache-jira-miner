@@ -81,13 +81,11 @@ public class HttpProjetosMiner {
 
     private void lerProjetosDoGrupo(BufferedReader dis, String linha, String grupoProjto) throws Exception {
         while (dis.ready() && !linha.contains("</table>")) {
-            try {
-                if (linha.contains("<a") && linha.contains("/jira/browse/")) {
-                    lerProjeto(dis, linha, grupoProjto);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
+
+            if (linha.contains("<a") && linha.contains("/jira/browse/")) {
+                lerProjeto(dis, linha, grupoProjto);
             }
+
             linha = dis.readLine();
         }
     }
@@ -155,5 +153,4 @@ public class HttpProjetosMiner {
         partes = partes[1].split("<"); // http://ant.apache.org/ivy/</a>
         return partes[0]; // http://ant.apache.org/ivy/
     }
-
 }

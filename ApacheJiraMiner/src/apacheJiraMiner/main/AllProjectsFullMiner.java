@@ -29,7 +29,7 @@ public class AllProjectsFullMiner {
         /*
          * este método percorrerá todos os projetos cadastrados acima e irá minerar suas Issues e comentários
          */
-        minerarIssues();
+        minerarIssues(0, 999);
 
     }
 
@@ -56,8 +56,8 @@ public class AllProjectsFullMiner {
         return false;
     }
 
-    private static void minerarIssues() {
-        for (int i = 838; i <= 400; i++) {
+    private static void minerarIssues(int idProjetoInicial, int idProjetoFinal) {
+        for (int i = idProjetoInicial; i <= idProjetoFinal; i++) {
             Conn.conectarDao();
             Projeto projeto = (Projeto) Conn.daoProjeto.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaIniciado(projeto)) {
