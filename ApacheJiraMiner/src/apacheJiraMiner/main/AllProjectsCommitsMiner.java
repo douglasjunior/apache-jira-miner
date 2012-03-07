@@ -2,11 +2,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package geronimominer;
+package apacheJiraMiner.main;
 
+import apacheJiraMiner.miner.HttpIssueMiner;
 import java.io.File;
-import pojo.Projeto;
-import util.Conn;
+import apacheJiraMiner.pojo.Projeto;
+import apacheJiraMiner.util.Conn;
 
 /**
  *
@@ -21,7 +22,7 @@ public class AllProjectsCommitsMiner {
             if (projeto != null && !projetoJaMinerado(projeto)) {
                 HttpIssueMiner httpIssues = new HttpIssueMiner(projeto);
                 try {
-                    httpIssues.atualizarCommits();
+                    httpIssues.atualizarCommitsDasIssues();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

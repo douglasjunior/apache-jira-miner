@@ -2,11 +2,11 @@
 <persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
   <persistence-unit name="HttpMineratorPU" transaction-type="RESOURCE_LOCAL">
     <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
-    <class>pojo.Issue</class>
-    <class>pojo.Projeto</class>
-    <class>pojo.Comentario</class>
-    <class>pojo.ArquivoModificado</class>
-    <class>pojo.Commits</class>
+    <class>apacheJiraMiner.pojo.Projeto</class>
+    <class>apacheJiraMiner.pojo.Commits</class>
+    <class>apacheJiraMiner.pojo.Issue</class>
+    <class>apacheJiraMiner.pojo.ArquivoModificado</class>
+    <class>apacheJiraMiner.pojo.Comentario</class>
     <properties>
       <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/aluno"/>
       <property name="javax.persistence.jdbc.password" value="aluno"/>

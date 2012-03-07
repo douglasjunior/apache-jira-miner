@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package geronimominer;
+package apacheJiraMiner.miner;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -10,23 +10,20 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
-import pojo.ArquivoModificado;
-import pojo.Comentario;
-import pojo.Commits;
-import pojo.Issue;
-import pojo.Projeto;
-import util.Conn;
-import util.Util;
+import apacheJiraMiner.pojo.ArquivoModificado;
+import apacheJiraMiner.pojo.Comentario;
+import apacheJiraMiner.pojo.Commits;
+import apacheJiraMiner.pojo.Issue;
+import apacheJiraMiner.pojo.Projeto;
+import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Util;
 
 /**
  *
@@ -41,16 +38,35 @@ public class HttpIssueMiner {
     public boolean minerarComentarios;
     public boolean minerarCommits;
 
-    public HttpIssueMiner() {
+    /**
+     * Construtor padrão e privado pois é obrigatória a informação do Projeto desejado.
+     */
+    private HttpIssueMiner() {
+        this.logFile = "log/";
         this.inexistentes = 0;
+        this.numeroProximaPagina = 0;
+        this.minerarComentarios = true;
+        this.minerarCommits = true;
     }
 
+    /**
+     * Construtor base.
+     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues com commits e comentarios.
+     */
     public HttpIssueMiner(Projeto projeto) {
         this();
-        this.logFile = "src/" + projeto.getxKey();
+        this.logFile += projeto.getxKey();
         this.projeto = projeto;
+
     }
 
+    /**
+     * Construtor.
+     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues.
+     * @param numeroProximaPagina - Número da issue inicial desejada.
+     * @param minerarComentarios - para minerar os comentarios selecione TRUE.
+     * @param minerarCommits 
+     */
     public HttpIssueMiner(Projeto projeto, int numeroProximaPagina, boolean minerarComentarios, boolean minerarCommits) {
         this(projeto);
         this.numeroProximaPagina = numeroProximaPagina;
@@ -58,10 +74,19 @@ public class HttpIssueMiner {
         this.minerarCommits = minerarCommits;
     }
 
+    /**
+     * Atualizar somente as datas das Issues que ja foram mineradas.
+     * @throws Exception 
+     */
     public void atualizarDatas() throws Exception {
         atualizarDatasDasIssuesDoProjeto(0);
     }
 
+    /**
+     * Atualizar somente as datas das Issues que ja foram mineradas.
+     * @param numeroIssueInicial - Número da issue inicial desejada
+     * @throws Exception 
+     */
     public void atualizarDatasDasIssuesDoProjeto(int numeroIssueInicial) throws Exception {
         this.logFile += ".issuedata";
 
@@ -69,7 +94,7 @@ public class HttpIssueMiner {
         System.out.println("----------------------------------------------");
         System.out.println("Iniciando a mineração das Datas das Issues");
         System.out.println("----------------------------------------------\n");
-        writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
 
         int contadorGC = 0;
 
@@ -97,9 +122,9 @@ public class HttpIssueMiner {
                     pegarDadosIssue(issue, linhas, i);
                 }
                 if (Conn.daoProjeto.atualiza(issue)) {
-                    writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
+                    Util.writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
                 } else {
-                    writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
+                    Util.writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
                 }
                 disCommits.close();
 
@@ -115,80 +140,88 @@ public class HttpIssueMiner {
             }
         }
 
-        writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
         System.out.println("----------------------------------------------");
         System.out.println("Terminado a mineração dos Commits das Issues");
         System.out.println("----------------------------------------------\n");
-
         projeto = null;
-
     }
 
-    public void atualizarDatasDasIssues(List<Issue> issues) throws MalformedURLException, Exception {
-        int contadorGC = 0;
-        for (Issue issue : issues) {
-            if (contadorGC >= 50) {
-                contadorGC = 0;
-                System.gc();
-            }
-
-            this.projeto = issue.getProjeto();
-
-            if (projeto == null) {
-
-                Conn.daoProjeto.remove(issue);
-
-            } else {
-
-                this.logFile = "src/" + projeto.getxKey() + ".issuedata";
-
-                this.numeroProximaPagina = issue.getNumeroIssue();
-
-                System.err.println("--------- Iniciando a mineração das Datas da Issues ---------");
-                System.err.println("Issue: " + getUrl());
-                System.err.println("---------------------------------------------------------------\n");
-
-                System.out.println("---- Conectando a URL : " + getUrl());
-                URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
-
-                BufferedReader disCommits = Util.abrirStream(urlComentarios);
-                System.out.println("---- Conectado a URL : " + getUrl());
-
-                List<String> linhas = capturarCodigoHtml(disCommits);
-                for (int i = linhas.size() - 300; i < linhas.size(); i++) {
-                    pegarDadosIssue(issue, linhas, i);
-                }
-                if (Conn.daoProjeto.atualiza(issue)) {
-                    writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
-                } else {
-                    writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
-                }
-                disCommits.close();
-
-                System.err.println("--------- Concluido a mineração das Datas da Issues ---------");
-                System.err.println("Issue: " + getUrl());
-                System.err.println("---------------------------------------------------------------\n");
-
-                disCommits = null;
-                urlComentarios = null;
-                issue = null;
-            }
-            contadorGC++;
-        }
+//    /**
+//     * Atualizar somente as datas das Issues.
+//     * @param issues - Lista com issues que deseja atualizar as datas.
+//     * @throws MalformedURLException
+//     * @throws Exception 
+//     */
+//    private void atualizarDatasDasIssues(List<Issue> issues) throws Exception {
+//        int contadorGC = 0;
+//        for (Issue issue : issues) {
+//            if (contadorGC >= 50) {
+//                contadorGC = 0;
+//                System.gc();
+//            }
+//            this.projeto = issue.getProjeto();
+//            if (projeto == null) {
+//                Conn.daoProjeto.remove(issue);
+//            } else {
+//
+//                this.logFile = "src/" + projeto.getxKey() + ".issuedata";
+//
+//                this.numeroProximaPagina = issue.getNumeroIssue();
+//
+//                System.err.println("--------- Iniciando a mineração das Datas da Issues ---------");
+//                System.err.println("Issue: " + getUrl());
+//                System.err.println("---------------------------------------------------------------\n");
+//
+//                System.out.println("---- Conectando a URL : " + getUrl());
+//                URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
+//
+//                BufferedReader disCommits = Util.abrirStream(urlComentarios);
+//                System.out.println("---- Conectado a URL : " + getUrl());
+//
+//                List<String> linhas = capturarCodigoHtml(disCommits);
+//                for (int i = linhas.size() - 300; i < linhas.size(); i++) {
+//                    pegarDadosIssue(issue, linhas, i);
+//                }
+//                if (Conn.daoProjeto.atualiza(issue)) {
+//                    writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
+//                } else {
+//                    writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
+//                }
+//                disCommits.close();
+//
+//                System.err.println("--------- Concluido a mineração das Datas da Issues ---------");
+//                System.err.println("Issue: " + getUrl());
+//                System.err.println("---------------------------------------------------------------\n");
+//
+//                disCommits = null;
+//                urlComentarios = null;
+//                issue = null;
+//            }
+//            contadorGC++;
+//        }
+//    }
+    /**
+     * Método que atualiza somente os Commits de Issues que já foram mineradas.
+     * @throws Exception 
+     */
+    public void atualizarCommitsDasIssues() throws Exception {
+        atualizarCommitsDasIssues(0);
     }
 
-    public void atualizarCommits() throws Exception {
-        atualizarCommits(0);
-    }
-
-    public void atualizarCommits(int numeroIssueInicial) throws Exception {
+    /**
+     * Método que atualiza somente os Commits de Issues que já foram mineradas.
+     * @param numeroIssueInicial - Numero da Issue inicial já minerada
+     * @throws Exception 
+     */
+    public void atualizarCommitsDasIssues(int numeroIssueInicial) throws Exception {
         this.logFile += ".commit";
 
         System.out.println("");
         System.out.println("----------------------------------------------");
         System.out.println("Iniciando a mineração dos Commits das Issues");
         System.out.println("----------------------------------------------\n");
-        writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
 
         int contadorGC = 0;
 
@@ -211,10 +244,10 @@ public class HttpIssueMiner {
                 System.out.println("---- Conectado a URL : " + getUrl());
                 try {
                     lerCommits(issue, capturarCodigoHtml(disCommits));
-                    writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue());
+                    Util.writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue());
                 } catch (Exception ex) {
                     ex.printStackTrace();
-                    writeToFile(logFile, "*Erro ao minerar commits da issue: " + issue.getNumeroIssue() + "*");
+                    Util.writeToFile(logFile, "*Erro ao minerar commits da issue: " + issue.getNumeroIssue() + "*");
                 }
                 disCommits.close();
 
@@ -230,7 +263,7 @@ public class HttpIssueMiner {
             }
         }
 
-        writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
         System.out.println("----------------------------------------------");
         System.out.println("Terminado a mineração dos Commits das Issues");
         System.out.println("----------------------------------------------\n");
@@ -238,13 +271,17 @@ public class HttpIssueMiner {
         projeto = null;
     }
 
+    /**
+     * Método que faz a mineração de todas as issues do projeto com commits e comentarios.
+     * @throws Exception 
+     */
     public void minerarIssues() throws Exception {
 
         System.out.println("");
         System.out.println("-----------------------------------------");
         System.out.println("Iniciando a mineração das Issues");
         System.out.println("-----------------------------------------\n");
-        writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
 
         int contadorGC = 0;
 
@@ -269,7 +306,7 @@ public class HttpIssueMiner {
             contadorGC++;
         }
 
-        writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
         System.out.println("-----------------------------------------");
         System.out.println("Terminado a mineração das Issues");
         System.out.println("-----------------------------------------\n");
@@ -311,13 +348,13 @@ public class HttpIssueMiner {
                     System.err.println("Nome: " + issue.getNome());
                     System.err.println("Numero: " + issue.getNumeroIssue());
                     System.err.println("----------------------------------------------------------\n");
-                    writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " cadastrada e adicionado ao projeto.");
+                    Util.writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " cadastrada e adicionado ao projeto.");
                 } else {
                     projeto.removeIssue(issue);
                     System.err.println("----- Issue cadastrado e *NÃO* adicionado ao Projeto -----");
                     System.err.println("Nome: " + issue.getNome());
                     System.err.println("Numero: " + issue.getNumeroIssue());
-                    writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " cadastrada.");
+                    Util.writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " cadastrada.");
                     System.err.println("----------------------------------------------------------\n");
                 }
                 return issue;
@@ -327,7 +364,7 @@ public class HttpIssueMiner {
                 System.err.println("Link: " + getUrl());
                 System.err.println("Numero: " + numeroProximaPagina);
                 System.err.println("----------------------------------------------------------\n");
-                writeToFile(logFile, "- Erro: Issue " + numeroProximaPagina + " não foi cadastrada.");
+                Util.writeToFile(logFile, "- Erro: Issue " + numeroProximaPagina + " não foi cadastrada.");
             }
         }
         return null;
@@ -339,7 +376,7 @@ public class HttpIssueMiner {
             System.err.println("---------------------------------------------\n");
             System.err.println("A página de Issue não existe");
             System.err.println("---------------------------------------------\n");
-            writeToFile(logFile, "- A Issue " + (numeroProximaPagina - 1) + " não existe, por isso não pode ser cadastrada.");
+            Util.writeToFile(logFile, "- A Issue " + (numeroProximaPagina - 1) + " não existe, por isso não pode ser cadastrada.");
             return false;
         } else if (linhas.get(i).contains("environment-val")) { // pega ENVIRONMENT
             issue.setAmbiente(pegaAmbiente(linhas, i));
@@ -392,7 +429,7 @@ public class HttpIssueMiner {
             }
 
             data = df.parse(partes[0] + "/" + partes[1] + "/" + partes[2]);
-            
+
             System.out.println("----------- Capturado Data da Issue ------------");
             System.out.println("Data: " + data.toString());
             System.out.println("String: " + partes[0] + "/" + partes[1] + "/" + partes[2]);
@@ -938,24 +975,6 @@ public class HttpIssueMiner {
 
     private String getUrl() {
         return projeto.getLinkIssue().replaceAll("-1", "-" + numeroProximaPagina);
-    }
-
-    private boolean writeToFile(String caminho, String msg) {
-        File f = new File(caminho);
-        try {
-            if (!f.exists()) {
-                f.createNewFile();
-            }
-            FileWriter fw = new FileWriter(f, true);
-            PrintWriter pw = new PrintWriter(fw);
-            pw.println(msg);
-            pw.close();
-            fw.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            return false;
-        }
-        return true;
     }
 
     private List<String> capturarCodigoHtml(BufferedReader dis) throws Exception {
