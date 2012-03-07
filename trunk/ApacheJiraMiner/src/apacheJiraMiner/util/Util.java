@@ -40,6 +40,7 @@ public class Util {
         File f = new File(caminho);
         try {
             if (!f.exists()) {
+                new File("log/").mkdirs();
                 f.createNewFile();
             }
             FileWriter fw = new FileWriter(f, true);
