@@ -19,12 +19,21 @@ public class AllProjectsFullMiner {
     public static void main(String[] args) {
 
 
-
         /*
          * este método irá coletar todos os projetos da página: "https://issues.apache.org/jira/secure/BrowseProjects.jspa#all"
          * não tem problema rodar este método várias vezes pois não cadastrará projetos repetidos
          */
+        minerarProjetos();
 
+
+        /*
+         * este método percorrerá todos os projetos cadastrados acima e irá minerar suas Issues e comentários
+         */
+        minerarIssues();
+
+    }
+
+    private static void minerarProjetos() {
         Conn.conectarDao();
         HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
         try {
@@ -33,12 +42,21 @@ public class AllProjectsFullMiner {
             ex.printStackTrace();
         }
         Conn.fecharConexao();
+    }
 
+    private static boolean projetoJaIniciado(Projeto projeto) {
+        File file = new File("src");
+        File[] files = file.listFiles();
+        for (File fl : files) {
+            if (fl.getName().replaceAll(".txt", "").equals(projeto.getNome())
+                    || fl.getName().replaceAll(".txt", "").equals(projeto.getxKey())) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-
-        /*
-         * este método percorrerá todos os projetos cadastrados e irá minerar suas Issues e comentários
-         */
+    private static void minerarIssues() {
         for (int i = 838; i <= 400; i++) {
             Conn.conectarDao();
             Projeto projeto = (Projeto) Conn.daoProjeto.buscaIDint(Projeto.class, i);
@@ -55,22 +73,5 @@ public class AllProjectsFullMiner {
             Conn.fecharConexao();
             System.gc();
         }
-
-        /*
-         * 
-         */
-
-    }
-
-    public static boolean projetoJaIniciado(Projeto projeto) {
-        File file = new File("src");
-        File[] files = file.listFiles();
-        for (File fl : files) {
-            if (fl.getName().replaceAll(".txt", "").equals(projeto.getNome())
-                    || fl.getName().replaceAll(".txt", "").equals(projeto.getxKey())) {
-                return true;
-            }
-        }
-        return false;
     }
 }
