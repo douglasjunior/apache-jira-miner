@@ -2,12 +2,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package util;
+package apacheJiraMiner.util;
 
 import dao.DAO;
 import java.util.List;
 import javax.persistence.Persistence;
-import pojo.Projeto;
+import apacheJiraMiner.pojo.Projeto;
 
 /**
  *

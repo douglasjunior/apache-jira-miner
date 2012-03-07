@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package geronimominer;
+package apacheJiraMiner.miner;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,9 +11,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Date;
-import pojo.Projeto;
-import util.Conn;
-import util.Util;
+import apacheJiraMiner.pojo.Projeto;
+import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Util;
 
 /**
  *
@@ -21,9 +21,18 @@ import util.Util;
  */
 public class HttpProjetosMiner {
 
-    private String stringUrl = "https://issues.apache.org/jira/secure/BrowseProjects.jspa#all";
-    private String logFile = "src/" + "log-projetos" + ".txt";
+    private String stringUrl;
+    private String logFile;
 
+    public HttpProjetosMiner() {
+        stringUrl = "https://issues.apache.org/jira/secure/BrowseProjects.jspa#all";
+        logFile = "log/" + "log-projetos" + ".txt";
+    }
+
+    /**
+     * Faz a mineração de todos os projetos do JIRA
+     * @throws Exception 
+     */
     public void minerarProjetos() throws Exception {
 
         URL url = new URL(stringUrl);
@@ -35,11 +44,11 @@ public class HttpProjetosMiner {
         System.out.println("-----------------------------------------");
         System.out.println("Iniciando a mineração dos Projetos");
         System.out.println("-----------------------------------------\n");
-        writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
 
         lerPaginaHtml(dis);
 
-        writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        Util.writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
         System.out.println("-----------------------------------------");
         System.out.println("Terminado a mineração dos Projetos");
         System.out.println("-----------------------------------------\n");
@@ -100,9 +109,9 @@ public class HttpProjetosMiner {
             linha = dis.readLine();
         }
         if (Conn.daoProjeto.insere(projeto)) {
-            writeToFile(logFile, "Registrado projeto: " + projeto.getNome());
+            Util.writeToFile(logFile, "Registrado projeto: " + projeto.getNome());
         } else {
-            writeToFile(logFile, "Erro ao gravar projeto: " + projeto.getNome());
+            Util.writeToFile(logFile, "Erro ao gravar projeto: " + projeto.getNome());
         }
         System.out.println("--- Cadastrado Projeto: " + projeto.getNome() + " ---");
         System.out.println("------------------------------------------------------\n");
@@ -147,22 +156,4 @@ public class HttpProjetosMiner {
         return partes[0]; // http://ant.apache.org/ivy/
     }
 
-    private boolean writeToFile(String caminho, String msg) throws Exception {
-        File f = new File(caminho);
-        try {
-            if (!f.exists()) {
-                f.createNewFile();
-            }
-            FileWriter fw = new FileWriter(f, true);
-            PrintWriter pw = new PrintWriter(fw);
-            pw.append(msg);
-            pw.println();
-            pw.close();
-            fw.close();
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
-            return false;
-        }
-        return true;
-    }
 }
