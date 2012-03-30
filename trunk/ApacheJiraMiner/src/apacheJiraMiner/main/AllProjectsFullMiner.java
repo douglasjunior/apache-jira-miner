@@ -8,7 +8,7 @@ import apacheJiraMiner.miner.HttpIssueMiner;
 import apacheJiraMiner.miner.HttpProjetosMiner;
 import java.io.File;
 import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Connection;
 
 /**
  *
@@ -29,38 +29,37 @@ public class AllProjectsFullMiner {
         /*
          * este método percorrerá todos os projetos cadastrados acima e irá minerar suas Issues e comentários
          */
-        minerarIssues(0, 999);
+        //    minerarIssues(0, 999);
 
     }
 
     private static void minerarProjetos() {
-        Conn.conectarDao();
+        Connection.conectarDao();
         HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
         try {
             httpProjetos.minerarProjetos();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        Conn.fecharConexao();
+        Connection.fecharConexao();
     }
 
-    private static boolean projetoJaIniciado(Projeto projeto) {
-        File file = new File("src");
-        File[] files = file.listFiles();
-        for (File fl : files) {
-            if (fl.getName().replaceAll(".txt", "").equals(projeto.getNome())
-                    || fl.getName().replaceAll(".txt", "").equals(projeto.getxKey())) {
-                return true;
-            }
+    private static boolean mineracaoDasIssuesDoProjetoJaIniciada(Projeto projeto) {
+        try {
+            Connection.dao.refreshObjeto(projeto);
+        } catch (Exception ex) {
         }
-        return false;
+        if (projeto.getIssues().isEmpty()) {
+            return false;
+        }
+        return true;
     }
 
     private static void minerarIssues(int idProjetoInicial, int idProjetoFinal) {
         for (int i = idProjetoInicial; i <= idProjetoFinal; i++) {
-            Conn.conectarDao();
-            Projeto projeto = (Projeto) Conn.daoProjeto.buscaIDint(Projeto.class, i);
-            if (projeto != null && !projetoJaIniciado(projeto)) {
+            Connection.conectarDao();
+            Projeto projeto = (Projeto) Connection.dao.buscaIDint(Projeto.class, i);
+            if (projeto != null && !mineracaoDasIssuesDoProjetoJaIniciada(projeto)) {
                 HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, 1, true, true);
                 try {
                     httpIssues.minerarIssues();
@@ -70,7 +69,7 @@ public class AllProjectsFullMiner {
                 httpIssues = null;
             }
             projeto = null;
-            Conn.fecharConexao();
+            Connection.fecharConexao();
             System.gc();
         }
     }

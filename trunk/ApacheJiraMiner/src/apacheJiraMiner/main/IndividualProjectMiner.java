@@ -6,7 +6,7 @@ package apacheJiraMiner.main;
 
 import apacheJiraMiner.miner.HttpIssueMiner;
 import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Connection;
 
 /**
  *
@@ -15,7 +15,7 @@ import apacheJiraMiner.util.Conn;
 public class IndividualProjectMiner {
 
     public static void main(String[] args) {
-        Conn.conectarDao();
+        Connection.conectarDao();
 
 //        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
 //        try {
@@ -27,7 +27,7 @@ public class IndividualProjectMiner {
         // FOR,HDFS,MAPREDUCE,TRINIDAD,OFBIZ,XMLBEANS,FLUME,QPID
 
 
-        Projeto projeto = Conn.consultaPorKey("QPID");
+        Projeto projeto = Connection.consultaIssuePorNumeroEProjeto("QPID");
         int proximaPagina = 663;
 
         if (projeto != null) {

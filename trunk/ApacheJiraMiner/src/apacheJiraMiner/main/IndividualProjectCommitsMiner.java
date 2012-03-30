@@ -6,7 +6,7 @@ package apacheJiraMiner.main;
 
 import apacheJiraMiner.miner.HttpIssueMiner;
 import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Connection;
 
 /**
  *
@@ -15,9 +15,9 @@ import apacheJiraMiner.util.Conn;
 public class IndividualProjectCommitsMiner {
 
     public static void main(String[] args) {
-        Conn.conectarDao();
+        Connection.conectarDao();
 
-        Projeto projeto = Conn.consultaPorKey("DIRSTUDIO");
+        Projeto projeto = Connection.consultaIssuePorNumeroEProjeto("DIRSTUDIO");
         int proximaPagina = 495;
 
         if (projeto != null) {
