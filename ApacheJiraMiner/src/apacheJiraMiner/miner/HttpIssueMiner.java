@@ -505,7 +505,7 @@ public class HttpIssueMiner {
         } else if (linhas.get(i).contains("assignee-val")) { // pega ASSIGNEE
             issue.setReporter(pegaLogin(linhas, i));
         } else if (linhas.get(i).contains("priority-val")) { // pega PRIORIDADE
-            issue.setDataCriada(pegaData(linhas.get(i)));
+            issue.setPrioridade(pegaPrioridade(linhas.get(i + 2)));
         } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
             issue.setDataResolvida(pegaData(linhas.get(i)));
         }
@@ -837,6 +837,12 @@ public class HttpIssueMiner {
                         System.err.println("Comentario: " + comentario.getComentario());
                         System.err.println("-----------------------------------------------------------------\n");
                     }
+                } else {
+                    System.err.println("\n-------- Comentario fora da data informada ----------");
+                    System.err.println("Autor: " + comentario.getAutor());
+                    System.err.println("Data: " + comentario.getDataComentario());
+                    System.err.println("Comentario: " + comentario.getComentario());
+                    System.err.println("-----------------------------------------------------------------\n");
                 }
                 comentario = null;
             }
@@ -913,6 +919,12 @@ public class HttpIssueMiner {
                         System.err.println("Mesangem: " + commit.getMensagem());
                         System.err.println("-----------------------------------------------------------------\n");
                     }
+                } else {
+                    System.err.println("\n-------- Commit fora da data informada ----------");
+                    System.err.println("Autor: " + commit.getAutor());
+                    System.err.println("Data: " + commit.getDataHora());
+                    System.err.println("Mesangem: " + commit.getMensagem());
+                    System.err.println("-----------------------------------------------------------------\n");
                 }
                 commit = null;
             }

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package apacheJiraMiner.main;
+package apacheJiraMiner.main.teste;
 
 import java.awt.FileDialog;
 import java.io.UnsupportedEncodingException;
