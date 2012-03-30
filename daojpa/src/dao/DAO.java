@@ -85,7 +85,7 @@ public class DAO {
         try {
             em.refresh(objeto);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            
         }
         return objeto;
     }

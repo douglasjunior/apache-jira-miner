@@ -7,7 +7,7 @@ package apacheJiraMiner.main;
 import apacheJiraMiner.miner.HttpIssueMiner;
 import java.io.File;
 import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Connection;
 
 /**
  *
@@ -17,8 +17,8 @@ public class AllProjectsCommitsMiner {
 
     public static void main(String[] args) {
         for (int i = 368; i >= 1; i--) {
-            Conn.conectarDao();
-            Projeto projeto = (Projeto) Conn.daoProjeto.buscaIDint(Projeto.class, i);
+            Connection.conectarDao();
+            Projeto projeto = (Projeto) Connection.dao.buscaIDint(Projeto.class, i);
             if (projeto != null && !projetoJaMinerado(projeto)) {
                 HttpIssueMiner httpIssues = new HttpIssueMiner(projeto);
                 try {
@@ -29,7 +29,7 @@ public class AllProjectsCommitsMiner {
                 httpIssues = null;
             }
             projeto = null;
-            Conn.fecharConexao();
+            Connection.fecharConexao();
             System.gc();
         }
     }

@@ -12,7 +12,7 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Date;
 import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Connection;
 import apacheJiraMiner.util.Util;
 
 /**
@@ -106,13 +106,21 @@ public class HttpProjetosMiner {
             }
             linha = dis.readLine();
         }
-        if (Conn.daoProjeto.insere(projeto)) {
-            Util.writeToFile(logFile, "Registrado projeto: " + projeto.getNome());
+        if (Connection.consultaIssuePorNumeroEProjeto(projeto.getxKey()) == null) {
+            if (Connection.dao.insere(projeto)) {
+                Util.writeToFile(logFile, "Registrado projeto: " + projeto.getNome());
+                System.out.println("--- Cadastrado Projeto: " + projeto.getNome() + " ---");
+                System.out.println("------------------------------------------------------\n");
+            } else {
+                Util.writeToFile(logFile, "Erro ao gravar projeto: " + projeto.getNome());
+                System.out.println("--- Erro ao cadastrar Projeto: " + projeto.getNome() + " ---");
+                System.out.println("------------------------------------------------------\n");
+            }
         } else {
             Util.writeToFile(logFile, "Erro ao gravar projeto: " + projeto.getNome());
+            System.out.println("--- Projeto já cadastrado: " + projeto.getNome() + " ---");
+            System.out.println("------------------------------------------------------\n");
         }
-        System.out.println("--- Cadastrado Projeto: " + projeto.getNome() + " ---");
-        System.out.println("------------------------------------------------------\n");
     }
 
     private String getNomeProjeto(String linha) throws Exception {

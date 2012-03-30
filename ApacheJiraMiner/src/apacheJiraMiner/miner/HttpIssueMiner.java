@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -22,7 +23,7 @@ import apacheJiraMiner.pojo.Comentario;
 import apacheJiraMiner.pojo.Commits;
 import apacheJiraMiner.pojo.Issue;
 import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Conn;
+import apacheJiraMiner.util.Connection;
 import apacheJiraMiner.util.Util;
 
 /**
@@ -35,8 +36,9 @@ public class HttpIssueMiner {
     private Projeto projeto;
     private String logFile;
     private int inexistentes;
-    public boolean minerarComentarios;
-    public boolean minerarCommits;
+    private boolean minerarComentarios;
+    private boolean minerarCommits;
+    private Date dataInicial;
 
     /**
      * Construtor padrão e privado pois é obrigatória a informação do Projeto desejado.
@@ -57,7 +59,7 @@ public class HttpIssueMiner {
         this();
         this.logFile += projeto.getxKey() + ".txt";
         this.projeto = projeto;
-
+        this.dataInicial = null;
     }
 
     /**
@@ -75,11 +77,66 @@ public class HttpIssueMiner {
     }
 
     /**
+     * Construtor.
+     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues.
+     * @param numeroProximaPagina - Número da issue inicial desejada.
+     * @param minerarComentarios - para minerar os comentarios selecione TRUE.
+     * @param minerarCommits 
+     */
+    public HttpIssueMiner(Projeto projeto, Date dataInicial, boolean minerarComentarios, boolean minerarCommits) {
+        this(projeto);
+        this.minerarComentarios = minerarComentarios;
+        this.minerarCommits = minerarCommits;
+        this.dataInicial = dataInicial;
+    }
+
+    /**
      * Atualizar somente as datas das Issues que ja foram mineradas.
      * @throws Exception 
      */
     public void atualizarDatas() throws Exception {
         atualizarDatasDasIssuesDoProjeto(0);
+    }
+
+    public void atualizarDadosDasIssuesDoProjetoAPartirDeUmaData() throws Exception {
+        if (dataInicial == null) {
+            System.err.println("Atributo 'dataInicial' não pode ser 'null'.");
+            System.exit(1);
+        }
+        System.out.println("");
+        System.out.println("-----------------------------------------");
+        System.out.println("Iniciando a atualização das Issues do Projeto " + projeto.getxKey() + " a partir de " + dataInicial);
+        System.out.println("-----------------------------------------\n");
+        Util.writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
+
+        int contadorGC = 0;
+
+        while (inexistentes <= 40) {
+            if (contadorGC >= 50) {
+                System.gc();
+                contadorGC = 0;
+            }
+            System.out.println("---- Conectando a URL : " + getUrl());
+            URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
+            URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
+            BufferedReader disComentarios = Util.abrirStream(urlComentarios);
+            BufferedReader disCommits = Util.abrirStream(urlCommmits);
+            System.out.println("---- Conectado a URL : " + getUrl());
+            lerPaginasHtmlsEAtualizarIssuesExistentes(capturarCodigoHtml(disComentarios), capturarCodigoHtml(disCommits));
+            disComentarios.close();
+            disCommits.close();
+            urlComentarios = null;
+            urlCommmits = null;
+            disComentarios = null;
+            disCommits = null;
+            contadorGC++;
+        }
+        Util.writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
+        System.out.println("-----------------------------------------");
+        System.out.println("Terminado a atualização das Issues do Projeto " + projeto.getxKey());
+        System.out.println("-----------------------------------------\n");
+
+        projeto = null;
     }
 
     /**
@@ -119,9 +176,9 @@ public class HttpIssueMiner {
 
                 List<String> linhas = capturarCodigoHtml(disCommits);
                 for (int i = linhas.size() - 300; i < linhas.size(); i++) {
-                    pegarDadosIssue(issue, linhas, i);
+                    pegarDadosNovaIssue(issue, linhas, i);
                 }
-                if (Conn.daoProjeto.atualiza(issue)) {
+                if (Connection.dao.atualiza(issue)) {
                     Util.writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
                 } else {
                     Util.writeToFile(logFile, "*Erro ao minerar Data da issue: " + issue.getNumeroIssue() + "*");
@@ -296,7 +353,7 @@ public class HttpIssueMiner {
             BufferedReader disComentarios = Util.abrirStream(urlComentarios);
             BufferedReader disCommits = Util.abrirStream(urlCommmits);
             System.out.println("---- Conectado a URL : " + getUrl());
-            lerPaginasHtmls(capturarCodigoHtml(disComentarios), capturarCodigoHtml(disCommits));
+            lerPaginasHtmlsESalvarNovasIssues(capturarCodigoHtml(disComentarios), capturarCodigoHtml(disCommits));
             disComentarios.close();
             disCommits.close();
             urlComentarios = null;
@@ -314,8 +371,38 @@ public class HttpIssueMiner {
         projeto = null;
     }
 
-    private void lerPaginasHtmls(List<String> linhasComentarios, List<String> linhasCommits) throws Exception {
-        Issue issue = lerIssue(linhasComentarios);
+    private void lerPaginasHtmlsEAtualizarIssuesExistentes(List<String> linhasComentarios, List<String> linhasCommits) throws Exception {
+        Issue issue = Connection.consultaIssuePorNumeroEProjeto(numeroProximaPagina, projeto);
+
+        if (issue == null) {
+            issue = lerNovaIssue(linhasComentarios);
+
+        } else {
+            issue = lerIssueExistente(issue, linhasComentarios);
+
+        }
+
+        if (issue != null && issue.getId() != 0) {
+            if (minerarComentarios) {
+
+                lerComentarios(issue, linhasComentarios);
+
+            }
+            if (minerarCommits) {
+
+                lerCommits(issue, linhasCommits);
+
+            }
+        }
+        issue = null;
+        linhasComentarios = null;
+        linhasCommits = null;
+        numeroProximaPagina++;
+    }
+
+    private void lerPaginasHtmlsESalvarNovasIssues(List<String> linhasComentarios, List<String> linhasCommits) throws Exception {
+        Issue issue = issue = lerNovaIssue(linhasComentarios);
+
         if (issue != null && issue.getId() != 0) {
             if (minerarComentarios) {
                 lerComentarios(issue, linhasComentarios);
@@ -330,11 +417,36 @@ public class HttpIssueMiner {
         numeroProximaPagina++;
     }
 
-    private Issue lerIssue(List<String> linhas) {
+    private Issue lerIssueExistente(Issue issue, List<String> linhas) {
+        for (int i = 0; i < linhas.size(); i++) {
+            if (!pegarDadosIssueExistente(issue, linhas, i)) {
+                return null;
+            }
+        }
+        if (issue.getNome() != null) {
+            inexistentes = 0;
+            if (Connection.dao.atualiza(issue)) {
+                System.err.println("-------- Issue atualizada --------");
+                System.err.println("Nome: " + issue.getNome());
+                System.err.println("Numero: " + issue.getNumeroIssue());
+                System.err.println("----------------------------------------------------------\n");
+                Util.writeToFile(logFile, "- Issue " + issue.getNumeroIssue() + " atualizada.");
+                return issue;
+            }
+        }
+        System.err.println("---------------- Erro ao atualizar Issue ----------------");
+        System.err.println("Link: " + getUrl());
+        System.err.println("Numero: " + numeroProximaPagina);
+        System.err.println("----------------------------------------------------------\n");
+        Util.writeToFile(logFile, "- Erro: Issue " + numeroProximaPagina + " não foi atualizada.");
+        return null;
+    }
+
+    private Issue lerNovaIssue(List<String> linhas) {
         Issue issue = new Issue();
         issue.setNumeroIssue(numeroProximaPagina);
         for (int i = 0; i < linhas.size(); i++) {
-            if (!pegarDadosIssue(issue, linhas, i)) {
+            if (!pegarDadosNovaIssue(issue, linhas, i)) {
                 return null;
             }
         }
@@ -342,8 +454,8 @@ public class HttpIssueMiner {
             inexistentes = 0;
             boolean inseriu = false;
             projeto.addIssue(issue);
-            if (Conn.daoProjeto.insere(issue)) {
-                if (Conn.daoProjeto.atualiza(projeto)) {
+            if (Connection.dao.insere(issue)) {
+                if (Connection.dao.atualiza(projeto)) {
                     System.err.println("-------- Issue cadastrado e adicionado ao Projeto --------");
                     System.err.println("Nome: " + issue.getNome());
                     System.err.println("Numero: " + issue.getNumeroIssue());
@@ -370,7 +482,37 @@ public class HttpIssueMiner {
         return null;
     }
 
-    private boolean pegarDadosIssue(Issue issue, List<String> linhas, int i) {
+    private boolean pegarDadosIssueExistente(Issue issue, List<String> linhas, int i) {
+        if (linhas.get(i).contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
+            inexistentes++;
+            System.err.println("---------------------------------------------\n");
+            System.err.println("A página de Issue não existe");
+            System.err.println("---------------------------------------------\n");
+            Util.writeToFile(logFile, "- A Issue " + (numeroProximaPagina - 1) + " não existe, por isso não pode ser cadastrada.");
+            return false;
+        } else if (linhas.get(i).contains("type-val")
+                && linhas.get(i).contains("class=\"value\"")
+                && linhas.get(i).contains("<span")) { // pega TIPO
+            issue.setTipo(pegaTipo(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("versions-val")) { // pega VERSAO AFETADA
+            issue.setVersoesAfetadas(pegaVersoes(linhas, i));
+        } else if (linhas.get(i).contains("status-val")) { // pega STATUS
+            issue.setStatus(pegaStatus(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("resolution-val")) { // pega RESOLUCAO
+            issue.setResolucao(pegaResolucao(linhas.get(i + 1)));
+        } else if (linhas.get(i).contains("fixfor-val")) { // pega VERSAO FIXADA
+            issue.setVersoesFixadas(pegaVersoes(linhas, i));
+        } else if (linhas.get(i).contains("assignee-val")) { // pega ASSIGNEE
+            issue.setReporter(pegaLogin(linhas, i));
+        } else if (linhas.get(i).contains("priority-val")) { // pega PRIORIDADE
+            issue.setDataCriada(pegaData(linhas.get(i)));
+        } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
+            issue.setDataResolvida(pegaData(linhas.get(i)));
+        }
+        return true;
+    }
+
+    private boolean pegarDadosNovaIssue(Issue issue, List<String> linhas, int i) {
         if (linhas.get(i).contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
             inexistentes++;
             System.err.println("---------------------------------------------\n");
@@ -407,7 +549,6 @@ public class HttpIssueMiner {
         } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
             issue.setDataResolvida(pegaData(linhas.get(i)));
         }
-
         return true;
     }
 
@@ -673,27 +814,29 @@ public class HttpIssueMiner {
         for (int i = 0; i < linhas.size(); i++) {
             if (linhas.get(i).contains("action-body flooded")) {
                 Comentario comentario = pegarComentario(linhas, i);
-                if (comentario != null && Conn.daoProjeto.insere(comentario)) {
-                    issue.addComentario(comentario);
-                    if (Conn.daoProjeto.atualiza(issue)) {
-                        System.err.println("\n--------- Comentário Cadastrado e adicioado a Issue ---------");
-                        System.err.println("Autor: " + comentario.getAutor());
-                        System.err.println("Data: " + comentario.getDataComentario());
-                        System.err.println("Comentario: " + comentario.getComentario());
-                        System.err.println("-----------------------------------------------------------------\n");
+                if (dataInicial == null || comentario.getDataComentario() == null || dataInicial.before(comentario.getDataComentario())) { // verifica se a data do cometario é maior que a dataInicial
+                    if (comentario != null && Connection.dao.insere(comentario)) {
+                        issue.addComentario(comentario);
+                        if (Connection.dao.atualiza(issue)) {
+                            System.err.println("\n--------- Comentário Cadastrado e adicioado a Issue ---------");
+                            System.err.println("Autor: " + comentario.getAutor());
+                            System.err.println("Data: " + comentario.getDataComentario());
+                            System.err.println("Comentario: " + comentario.getComentario());
+                            System.err.println("-----------------------------------------------------------------\n");
+                        } else {
+                            System.err.println("\n--------- Comentário Cadastrado e *NÃO* adicioado a Issue ---------");
+                            System.err.println("Autor: " + comentario.getAutor());
+                            System.err.println("Data: " + comentario.getDataComentario());
+                            System.err.println("Comentario: " + comentario.getComentario());
+                            System.err.println("-----------------------------------------------------------------\n");
+                        }
                     } else {
-                        System.err.println("\n--------- Comentário Cadastrado e *NÃO* adicioado a Issue ---------");
+                        System.err.println("\n-------- Erro ao Cadastrar Comentario ----------");
                         System.err.println("Autor: " + comentario.getAutor());
                         System.err.println("Data: " + comentario.getDataComentario());
                         System.err.println("Comentario: " + comentario.getComentario());
                         System.err.println("-----------------------------------------------------------------\n");
                     }
-                } else {
-                    System.err.println("\n-------- Erro ao Cadastrar Comentario ----------");
-                    System.err.println("Autor: " + comentario.getAutor());
-                    System.err.println("Data: " + comentario.getDataComentario());
-                    System.err.println("Comentario: " + comentario.getComentario());
-                    System.err.println("-----------------------------------------------------------------\n");
                 }
                 comentario = null;
             }
@@ -746,28 +889,30 @@ public class HttpIssueMiner {
         for (int i = 0; i < linhas.size(); i++) {
             if (linhas.get(i).contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>User</b></td>")) {
                 Commits commit = pegarCommit(linhas, i);
-                if (commit != null && Conn.daoProjeto.insere(commit)) {
-                    leiArquivosModificados(commit, linhas, i + 13);
-                    issue.addCommit(commit);
-                    if (Conn.daoProjeto.atualiza(issue)) {
-                        System.err.println("\n--------- Commit Cadastrado e adicioado a Issue ---------");
-                        System.err.println("Autor: " + commit.getAutor());
-                        System.err.println("Data: " + commit.getDataHora());
-                        System.err.println("Mesangem: " + commit.getMensagem());
-                        System.err.println("-----------------------------------------------------------------\n");
+                if (dataInicial == null || commit.getDataHora() == null || dataInicial.before(commit.getDataHora())) { // verifica se a data do commit é maior que a dataInicial
+                    if (commit != null && Connection.dao.insere(commit)) {
+                        leiArquivosModificados(commit, linhas, i + 13);
+                        issue.addCommit(commit);
+                        if (Connection.dao.atualiza(issue)) {
+                            System.err.println("\n--------- Commit Cadastrado e adicioado a Issue ---------");
+                            System.err.println("Autor: " + commit.getAutor());
+                            System.err.println("Data: " + commit.getDataHora());
+                            System.err.println("Mesangem: " + commit.getMensagem());
+                            System.err.println("-----------------------------------------------------------------\n");
+                        } else {
+                            System.err.println("\n--------- Commit Cadastrado e *NÃO* adicioado a Issue ---------");
+                            System.err.println("Autor: " + commit.getAutor());
+                            System.err.println("Data: " + commit.getDataHora());
+                            System.err.println("Mesangem: " + commit.getMensagem());
+                            System.err.println("-----------------------------------------------------------------\n");
+                        }
                     } else {
-                        System.err.println("\n--------- Commit Cadastrado e *NÃO* adicioado a Issue ---------");
+                        System.err.println("\n-------- Erro ao Cadastrar Commit ----------");
                         System.err.println("Autor: " + commit.getAutor());
                         System.err.println("Data: " + commit.getDataHora());
                         System.err.println("Mesangem: " + commit.getMensagem());
                         System.err.println("-----------------------------------------------------------------\n");
                     }
-                } else {
-                    System.err.println("\n-------- Erro ao Cadastrar Commit ----------");
-                    System.err.println("Autor: " + commit.getAutor());
-                    System.err.println("Data: " + commit.getDataHora());
-                    System.err.println("Mesangem: " + commit.getMensagem());
-                    System.err.println("-----------------------------------------------------------------\n");
                 }
                 commit = null;
             }
@@ -819,7 +964,7 @@ public class HttpIssueMiner {
                 arquivo.setAcao(pegaAcaoArquivoModificado(linhas.get(i)));
                 arquivo.setUrl(pegaURLArquivoModificado(linhas.get(i + 1)));
                 arquivo.setNome(pegaNomeArquivoModificado(linhas.get(i + 1)));
-                if (Conn.daoProjeto.insere(arquivo)) {
+                if (Connection.dao.insere(arquivo)) {
                     commit.addArquivoModificado(arquivo);
                 }
                 arquivo = null;
