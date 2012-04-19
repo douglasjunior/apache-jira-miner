@@ -6,7 +6,6 @@ package apacheJiraMiner.main;
 
 import apacheJiraMiner.miner.HttpIssueMiner;
 import apacheJiraMiner.miner.HttpProjetosMiner;
-import java.io.File;
 import apacheJiraMiner.pojo.Projeto;
 import apacheJiraMiner.util.Connection;
 
@@ -23,17 +22,17 @@ public class AllProjectsFullMiner {
          * este método irá coletar todos os projetos da página: "https://issues.apache.org/jira/secure/BrowseProjects.jspa#all"
          * não tem problema rodar este método várias vezes pois não cadastrará projetos repetidos
          */
-        minerarProjetos();
+        minerarSomenteProjetos();
 
 
         /*
          * este método percorrerá todos os projetos cadastrados acima e irá minerar suas Issues e comentários
          */
-        //    minerarIssues(0, 999);
+        //    minerarIssuesDosProjetos(0, 999);
 
     }
 
-    private static void minerarProjetos() {
+    private static void minerarSomenteProjetos() {
         Connection.conectarDao();
         HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
         try {
@@ -55,7 +54,7 @@ public class AllProjectsFullMiner {
         return true;
     }
 
-    private static void minerarIssues(int idProjetoInicial, int idProjetoFinal) {
+    private static void minerarIssuesDosProjetos(int idProjetoInicial, int idProjetoFinal) {
         for (int i = idProjetoInicial; i <= idProjetoFinal; i++) {
             Connection.conectarDao();
             Projeto projeto = (Projeto) Connection.dao.buscaIDint(Projeto.class, i);

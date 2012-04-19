@@ -22,7 +22,7 @@ public class Connection {
         dao = new DAO(Persistence.createEntityManagerFactory("HttpMineratorPU").createEntityManager());
     }
 
-    public static Projeto consultaIssuePorNumeroEProjeto(String key) {
+    public static Projeto consultaProjetoPorKey(String key) {
         List<Projeto> pjts = dao.selecionaComParametros("SELECT p FROM Projeto p WHERE p.xKey = :key",
                 new String[]{"key"},
                 new Object[]{key});
@@ -31,7 +31,7 @@ public class Connection {
         }
         return pjts.get(0);
     }
-
+    
     public static Issue consultaIssuePorNumeroEProjeto(int numeroIssue, Projeto projeto) {
         List<Issue> issues = dao.selecionaComParametros("SELECT i FROM Issue i WHERE i.numeroIssue = :numeroIssue AND i.projeto = :projeto",
                 new String[]{"numeroIssue", "projeto"},
