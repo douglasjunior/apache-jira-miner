@@ -27,7 +27,7 @@ public class IndividualProjectMiner {
         // FOR,HDFS,MAPREDUCE,TRINIDAD,OFBIZ,XMLBEANS,FLUME,QPID
 
 
-        Projeto projeto = Connection.consultaIssuePorNumeroEProjeto("QPID");
+        Projeto projeto = Connection.consultaProjetoPorKey("QPID");
         int proximaPagina = 663;
 
         if (projeto != null) {

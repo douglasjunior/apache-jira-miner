@@ -5,12 +5,7 @@
 package apacheJiraMiner.miner;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -98,7 +93,8 @@ public class HttpIssueMiner {
         atualizarDatasDasIssuesDoProjeto(0);
     }
 
-    public void atualizarDadosDasIssuesDoProjetoAPartirDeUmaData() throws Exception {
+    public void atualizarDadosDasIssuesDoProjetoAPartirDeUmaData(int issueInicial) throws Exception {
+        numeroProximaPagina = issueInicial;
         if (dataInicial == null) {
             System.err.println("Atributo 'dataInicial' não pode ser 'null'.");
             System.exit(1);
@@ -300,7 +296,7 @@ public class HttpIssueMiner {
                 BufferedReader disCommits = Util.abrirStream(urlCommmits);
                 System.out.println("---- Conectado a URL : " + getUrl());
                 try {
-                    lerCommits(issue, capturarCodigoHtml(disCommits));
+                    lerCommits(issue, capturarCodigoHtml(disCommits), true);
                     Util.writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue());
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -373,24 +369,24 @@ public class HttpIssueMiner {
 
     private void lerPaginasHtmlsEAtualizarIssuesExistentes(List<String> linhasComentarios, List<String> linhasCommits) throws Exception {
         Issue issue = Connection.consultaIssuePorNumeroEProjeto(numeroProximaPagina, projeto);
-
+        boolean novaIssue = false;
         if (issue == null) {
             issue = lerNovaIssue(linhasComentarios);
-
+            novaIssue = true;
         } else {
             issue = lerIssueExistente(issue, linhasComentarios);
-
+            novaIssue = false;
         }
 
         if (issue != null && issue.getId() != 0) {
             if (minerarComentarios) {
 
-                lerComentarios(issue, linhasComentarios);
+                lerComentarios(issue, linhasComentarios, novaIssue);
 
             }
             if (minerarCommits) {
 
-                lerCommits(issue, linhasCommits);
+                lerCommits(issue, linhasCommits, novaIssue);
 
             }
         }
@@ -405,10 +401,10 @@ public class HttpIssueMiner {
 
         if (issue != null && issue.getId() != 0) {
             if (minerarComentarios) {
-                lerComentarios(issue, linhasComentarios);
+                lerComentarios(issue, linhasComentarios, true);
             }
             if (minerarCommits) {
-                lerCommits(issue, linhasCommits);
+                lerCommits(issue, linhasCommits, true);
             }
         }
         issue = null;
@@ -810,11 +806,11 @@ public class HttpIssueMiner {
         return ambiente;
     }
 
-    private void lerComentarios(Issue issue, List<String> linhas) {
+    private void lerComentarios(Issue issue, List<String> linhas, boolean novaIssue) {
         for (int i = 0; i < linhas.size(); i++) {
             if (linhas.get(i).contains("action-body flooded")) {
                 Comentario comentario = pegarComentario(linhas, i);
-                if (dataInicial == null || comentario.getDataComentario() == null || dataInicial.before(comentario.getDataComentario())) { // verifica se a data do cometario é maior que a dataInicial
+                if (novaIssue || dataInicial == null || comentario.getDataComentario() == null || dataInicial.before(comentario.getDataComentario())) { // verifica se a data do cometario é maior que a dataInicial
                     if (comentario != null && Connection.dao.insere(comentario)) {
                         issue.addComentario(comentario);
                         if (Connection.dao.atualiza(issue)) {
@@ -891,11 +887,11 @@ public class HttpIssueMiner {
         return hora;
     }
 
-    private void lerCommits(Issue issue, List<String> linhas) {
+    private void lerCommits(Issue issue, List<String> linhas, boolean novaIssue) {
         for (int i = 0; i < linhas.size(); i++) {
             if (linhas.get(i).contains("<td bgcolor=\"#f0f0f0\" width=\"10%\"><b>User</b></td>")) {
                 Commits commit = pegarCommit(linhas, i);
-                if (dataInicial == null || commit.getDataHora() == null || dataInicial.before(commit.getDataHora())) { // verifica se a data do commit é maior que a dataInicial
+                if (novaIssue || dataInicial == null || commit.getDataHora() == null || dataInicial.before(commit.getDataHora())) { // verifica se a data do commit é maior que a dataInicial
                     if (commit != null && Connection.dao.insere(commit)) {
                         leiArquivosModificados(commit, linhas, i + 13);
                         issue.addCommit(commit);

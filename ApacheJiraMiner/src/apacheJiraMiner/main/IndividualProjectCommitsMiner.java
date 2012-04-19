@@ -17,7 +17,7 @@ public class IndividualProjectCommitsMiner {
     public static void main(String[] args) {
         Connection.conectarDao();
 
-        Projeto projeto = Connection.consultaIssuePorNumeroEProjeto("DIRSTUDIO");
+        Projeto projeto = Connection.consultaProjetoPorKey("DIRSTUDIO");
         int proximaPagina = 495;
 
         if (projeto != null) {

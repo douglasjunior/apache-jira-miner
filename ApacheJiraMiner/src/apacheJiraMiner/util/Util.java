@@ -37,18 +37,21 @@ public class Util {
     }
 
     public static boolean writeToFile(String caminho, String msg) {
-        File f = new File(caminho);
+        File file = new File(caminho);
         try {
-            if (!f.exists()) {
+            if (!file.exists()) {
                 new File("log/").mkdirs();
-                f.createNewFile();
+                file.createNewFile();
             }
-            FileWriter fw = new FileWriter(f, true);
+            FileWriter fw = new FileWriter(file, true);
             PrintWriter pw = new PrintWriter(fw);
             pw.println(msg);
             pw.close();
             fw.close();
-        } catch (IOException ex) {
+            pw = null;
+            fw = null;
+            file = null;
+        } catch (Exception ex) {
             ex.printStackTrace();
             return false;
         }

@@ -46,7 +46,7 @@ public class HttpProjetosMiner {
         System.out.println("-----------------------------------------\n");
         Util.writeToFile(logFile, "Início da mineração: " + new Date() + "\n");
 
-        lerPaginaHtml(dis);
+        lerPaginaHtmlECapturarProjetos(dis);
 
         Util.writeToFile(logFile, "Fim da mineração: " + new Date() + "\n");
         System.out.println("-----------------------------------------");
@@ -54,29 +54,29 @@ public class HttpProjetosMiner {
         System.out.println("-----------------------------------------\n");
     }
 
-    private void lerPaginaHtml(BufferedReader dis) throws Exception {
+    private void lerPaginaHtmlECapturarProjetos(BufferedReader dis) throws Exception {
         String linha = dis.readLine();
         System.out.println("---- Iniciado leitura de página HTML: \n");
         while (linha != null && !linha.contains("</html>")) {
             if (linha.contains("<h3>")) {
-                lerGrupoDeProjetos(dis, linha);
+                lerGrupoEProjetos(dis, linha);
             }
             linha = dis.readLine();
         }
         System.out.println("\n---- Finalizado leitura de página HTML: \n");
     }
 
-    private void lerGrupoDeProjetos(BufferedReader dis, String linha) throws Exception {
-        String grupoProjto = getNomeGrupoProjeto(linha);
-        System.err.println("\n-------- Inicio dos Projetos do Grupo: " + grupoProjto + " ------\n");
+    private void lerGrupoEProjetos(BufferedReader dis, String linha) throws Exception {
+        String grupoProjeto = getNomeGrupoProjeto(linha);
+        System.err.println("\n-------- Inicio dos Projetos do Grupo: " + grupoProjeto + " ------\n");
         linha = dis.readLine();
         while (dis.ready() && !linha.contains("class=\"mod-header plain\"")) {
-            if (linha.contains("<tbody") && !grupoProjto.contains("Recent Projects")) {
-                lerProjetosDoGrupo(dis, linha, grupoProjto);
+            if (linha.contains("<tbody") && !grupoProjeto.contains("Recent Projects")) {
+                lerProjetosDoGrupo(dis, linha, grupoProjeto);
             }
             linha = dis.readLine();
         }
-        System.err.println("\n-------- Término dos Projetos do Grupo: " + grupoProjto + " ------\n");
+        System.err.println("\n-------- Término dos Projetos do Grupo: " + grupoProjeto + " ------\n");
     }
 
     private void lerProjetosDoGrupo(BufferedReader dis, String linha, String grupoProjto) throws Exception {
@@ -106,7 +106,7 @@ public class HttpProjetosMiner {
             }
             linha = dis.readLine();
         }
-        if (Connection.consultaIssuePorNumeroEProjeto(projeto.getxKey()) == null) {
+        if (Connection.consultaProjetoPorKey(projeto.getxKey()) == null) {
             if (Connection.dao.insere(projeto)) {
                 Util.writeToFile(logFile, "Registrado projeto: " + projeto.getNome());
                 System.out.println("--- Cadastrado Projeto: " + projeto.getNome() + " ---");
