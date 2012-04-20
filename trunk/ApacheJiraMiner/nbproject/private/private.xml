@@ -6,10 +6,4 @@
             <line>0</line>
         </file>
     </editor-bookmarks>
-    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
-        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/apacheJiraMiner/main/AllIssuesUpdateMinerFromStartDate.java</file>
-        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/apacheJiraMiner/miner/HttpIssueMiner.java</file>
-        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/apacheJiraMiner/pojo/Issue.java</file>
-        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/apacheJiraMiner/main/Teste.java</file>
-    </open-files>
 </project-private>
