@@ -22,7 +22,7 @@ public class Issue implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @Column(columnDefinition="TEXT")
+    @Column(columnDefinition = "TEXT")
     private String nome;
     private String assignee;
     private String reporter;
@@ -47,6 +47,8 @@ public class Issue implements Serializable {
     private String prioridade;
     @Column(length = 50)
     private String resolucao;
+    @Column(columnDefinition = "LONGTEXT")
+    private String descricao;
     private int numeroIssue;
     @ManyToOne
     private Projeto projeto;
@@ -55,10 +57,18 @@ public class Issue implements Serializable {
     @OneToMany(mappedBy = "issue", cascade = CascadeType.REFRESH, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "ISSUE_ID")
     private List<Commits> commits;
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "ISSUE_ID")
+    private List<Label> labels;
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "ISSUE_ID")
+    private List<TargetVersion> targetVersions;
 
     public Issue() {
         comentarios = new ArrayList<Comentario>();
         commits = new ArrayList<Commits>();
+        labels = new ArrayList<Label>();
+        targetVersions = new ArrayList<TargetVersion>();
     }
 
     public Issue(Projeto projeto) {
@@ -140,6 +150,14 @@ public class Issue implements Serializable {
 
     public void setResolucao(String resolucao) {
         this.resolucao = resolucao;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public void setDescricao(String descricao) {
+        this.descricao = descricao;
     }
 
     public String getStatus() {
@@ -226,6 +244,36 @@ public class Issue implements Serializable {
             getCommits().add(commit);
         }
         commit.setIssue(this);
+    }
+
+    public List<Label> getLabels() {
+        return labels;
+    }
+
+    public void setLabels(List<Label> labels) {
+        this.labels = labels;
+    }
+
+    public void addLabel(Label label) {
+        if (!getLabels().contains(label) || label.getId() == 0) {
+            getLabels().add(label);
+        }
+        label.setIssue(this);
+    }
+
+    public List<TargetVersion> getTargetVersions() {
+        return targetVersions;
+    }
+
+    public void setTargetVersions(List<TargetVersion> targetVersions) {
+        this.targetVersions = targetVersions;
+    }
+
+    public void addTargetVersion(TargetVersion targetVersion) {
+        if (!getTargetVersions().contains(targetVersion) || targetVersion.getId() == 0) {
+            getTargetVersions().add(targetVersion);
+        }
+        targetVersion.setIssue(this);
     }
 
     @Override
