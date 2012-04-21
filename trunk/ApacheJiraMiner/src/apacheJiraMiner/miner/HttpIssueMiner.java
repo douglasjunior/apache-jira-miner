@@ -4,6 +4,9 @@
  */
 package apacheJiraMiner.miner;
 
+import apacheJiraMiner.pojo.*;
+import apacheJiraMiner.util.Connection;
+import apacheJiraMiner.util.Util;
 import java.io.BufferedReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -13,13 +16,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import apacheJiraMiner.pojo.ArquivoModificado;
-import apacheJiraMiner.pojo.Comentario;
-import apacheJiraMiner.pojo.Commits;
-import apacheJiraMiner.pojo.Issue;
-import apacheJiraMiner.pojo.Projeto;
-import apacheJiraMiner.util.Connection;
-import apacheJiraMiner.util.Util;
 
 /**
  *
@@ -36,7 +32,8 @@ public class HttpIssueMiner {
     private Date dataInicial;
 
     /**
-     * Construtor padrão e privado pois é obrigatória a informação do Projeto desejado.
+     * Construtor padrão e privado pois é obrigatória a informação do Projeto
+     * desejado.
      */
     private HttpIssueMiner() {
         this.logFile = "log/";
@@ -48,7 +45,9 @@ public class HttpIssueMiner {
 
     /**
      * Construtor base.
-     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues com commits e comentarios.
+     *
+     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues
+     * com commits e comentarios.
      */
     public HttpIssueMiner(Projeto projeto) {
         this();
@@ -59,10 +58,12 @@ public class HttpIssueMiner {
 
     /**
      * Construtor.
-     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues.
+     *
+     * @param projeto - Objeto referente ao Projeto que deseja minerar as
+     * issues.
      * @param numeroProximaPagina - Número da issue inicial desejada.
      * @param minerarComentarios - para minerar os comentarios selecione TRUE.
-     * @param minerarCommits 
+     * @param minerarCommits
      */
     public HttpIssueMiner(Projeto projeto, int numeroProximaPagina, boolean minerarComentarios, boolean minerarCommits) {
         this(projeto);
@@ -73,10 +74,12 @@ public class HttpIssueMiner {
 
     /**
      * Construtor.
-     * @param projeto - Objeto referente ao Projeto que deseja minerar as issues.
+     *
+     * @param projeto - Objeto referente ao Projeto que deseja minerar as
+     * issues.
      * @param numeroProximaPagina - Número da issue inicial desejada.
      * @param minerarComentarios - para minerar os comentarios selecione TRUE.
-     * @param minerarCommits 
+     * @param minerarCommits
      */
     public HttpIssueMiner(Projeto projeto, Date dataInicial, boolean minerarComentarios, boolean minerarCommits) {
         this(projeto);
@@ -87,7 +90,8 @@ public class HttpIssueMiner {
 
     /**
      * Atualizar somente as datas das Issues que ja foram mineradas.
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public void atualizarDatas() throws Exception {
         atualizarDatasDasIssuesDoProjeto(0);
@@ -137,8 +141,9 @@ public class HttpIssueMiner {
 
     /**
      * Atualizar somente as datas das Issues que ja foram mineradas.
+     *
      * @param numeroIssueInicial - Número da issue inicial desejada
-     * @throws Exception 
+     * @throws Exception
      */
     public void atualizarDatasDasIssuesDoProjeto(int numeroIssueInicial) throws Exception {
         this.logFile += ".issuedata.txt";
@@ -172,7 +177,7 @@ public class HttpIssueMiner {
 
                 List<String> linhas = capturarCodigoHtml(disCommits);
                 for (int i = linhas.size() - 300; i < linhas.size(); i++) {
-                    pegarDadosNovaIssue(issue, linhas, i);
+                    pegarDadosIssue(issue, linhas, i);
                 }
                 if (Connection.dao.atualiza(issue)) {
                     Util.writeToFile(logFile, "Datas minerados com sucesso da issue: " + issue.getNumeroIssue());
@@ -256,7 +261,8 @@ public class HttpIssueMiner {
 //    }
     /**
      * Método que atualiza somente os Commits de Issues que já foram mineradas.
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     public void atualizarCommitsDasIssues() throws Exception {
         atualizarCommitsDasIssues(0);
@@ -264,8 +270,9 @@ public class HttpIssueMiner {
 
     /**
      * Método que atualiza somente os Commits de Issues que já foram mineradas.
+     *
      * @param numeroIssueInicial - Numero da Issue inicial já minerada
-     * @throws Exception 
+     * @throws Exception
      */
     public void atualizarCommitsDasIssues(int numeroIssueInicial) throws Exception {
         this.logFile += ".commit";
@@ -325,8 +332,10 @@ public class HttpIssueMiner {
     }
 
     /**
-     * Método que faz a mineração de todas as issues do projeto com commits e comentarios.
-     * @throws Exception 
+     * Método que faz a mineração de todas as issues do projeto com commits e
+     * comentarios.
+     *
+     * @throws Exception
      */
     public void minerarIssues() throws Exception {
 
@@ -415,7 +424,7 @@ public class HttpIssueMiner {
 
     private Issue lerIssueExistente(Issue issue, List<String> linhas) {
         for (int i = 0; i < linhas.size(); i++) {
-            if (!pegarDadosIssueExistente(issue, linhas, i)) {
+            if (!pegarDadosIssue(issue, linhas, i)) {
                 return null;
             }
         }
@@ -442,7 +451,7 @@ public class HttpIssueMiner {
         Issue issue = new Issue();
         issue.setNumeroIssue(numeroProximaPagina);
         for (int i = 0; i < linhas.size(); i++) {
-            if (!pegarDadosNovaIssue(issue, linhas, i)) {
+            if (!pegarDadosIssue(issue, linhas, i)) {
                 return null;
             }
         }
@@ -478,37 +487,33 @@ public class HttpIssueMiner {
         return null;
     }
 
-    private boolean pegarDadosIssueExistente(Issue issue, List<String> linhas, int i) {
-        if (linhas.get(i).contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
-            inexistentes++;
-            System.err.println("---------------------------------------------\n");
-            System.err.println("A página de Issue não existe");
-            System.err.println("---------------------------------------------\n");
-            Util.writeToFile(logFile, "- A Issue " + (numeroProximaPagina - 1) + " não existe, por isso não pode ser cadastrada.");
-            return false;
-        } else if (linhas.get(i).contains("type-val")
-                && linhas.get(i).contains("class=\"value\"")
-                && linhas.get(i).contains("<span")) { // pega TIPO
-            issue.setTipo(pegaTipo(linhas.get(i + 2)));
-        } else if (linhas.get(i).contains("versions-val")) { // pega VERSAO AFETADA
-            issue.setVersoesAfetadas(pegaVersoes(linhas, i));
-        } else if (linhas.get(i).contains("status-val")) { // pega STATUS
-            issue.setStatus(pegaStatus(linhas.get(i + 2)));
-        } else if (linhas.get(i).contains("resolution-val")) { // pega RESOLUCAO
-            issue.setResolucao(pegaResolucao(linhas.get(i + 1)));
-        } else if (linhas.get(i).contains("fixfor-val")) { // pega VERSAO FIXADA
-            issue.setVersoesFixadas(pegaVersoes(linhas, i));
-        } else if (linhas.get(i).contains("assignee-val")) { // pega ASSIGNEE
-            issue.setReporter(pegaLogin(linhas, i));
-        } else if (linhas.get(i).contains("priority-val")) { // pega PRIORIDADE
-            issue.setPrioridade(pegaPrioridade(linhas.get(i + 2)));
-        } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
-            issue.setDataResolvida(pegaData(linhas.get(i)));
+    private String pegaDescricao(List<String> linhas, int i) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            int qtdDiv = 0;
+            while (!linhas.get(i).contains("</div>") && qtdDiv == 0) {
+                if (linhas.get(i).contains("<div")) {
+                    qtdDiv++;
+                }
+                if (linhas.get(i).contains("</div>")) {
+                    qtdDiv--;
+                }
+                sb.append(linhas.get(i));
+                sb.append("\n");
+                i++;
+            }
+            System.out.println("----------- Capturado Descrição da Issue ------------");
+            System.out.println("Descrição: " + sb.toString());
+            System.out.println("-----------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("-------- Erro ao capturar Descrição da Issue --------");
+            ex.printStackTrace();
+            System.err.println("-----------------------------------------------------");
         }
-        return true;
+        return sb.toString();
     }
 
-    private boolean pegarDadosNovaIssue(Issue issue, List<String> linhas, int i) {
+    private boolean pegarDadosIssue(Issue issue, List<String> linhas, int i) {
         if (linhas.get(i).contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
             inexistentes++;
             System.err.println("---------------------------------------------\n");
@@ -538,6 +543,12 @@ public class HttpIssueMiner {
             issue.setReporter(pegaLogin(linhas, i));
         } else if (linhas.get(i).contains("priority-val")) { // pega PRIORIDADE
             issue.setPrioridade(pegaPrioridade(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("wrap-labels")) { // pega LABELS
+            pegaLabels(issue, linhas, i + 3);
+        } else if (linhas.get(i).contains("Target Version/s")) { // pega TARGET VERSIONS
+            pegaTargeVersions(issue, linhas.get(i + 3));
+        } else if (linhas.get(i).contains("issue-description")) { // pega DESCRICAO
+            issue.setDescricao(pegaDescricao(linhas, i + 1));
         } else if (linhas.get(i).contains("components-val")) { // pega COMPONENTES
             issue.setComponentes(pegaComponentes(linhas, i));
         } else if (linhas.get(i).contains("create-date")) { // pega DATA CRIADA
@@ -546,6 +557,58 @@ public class HttpIssueMiner {
             issue.setDataResolvida(pegaData(linhas.get(i)));
         }
         return true;
+    }
+
+    private void pegaTargeVersions(Issue issue, String linha) {
+        try {
+            String[] versions = linha.split("</a>");
+
+            for (int i = 0; i < versions.length - 1; i++) {
+                String[] partes = versions[i].split(">");
+                issue.addTargetVersion(new TargetVersion(partes[1]));
+            }
+            System.out.println("----------- Capturado Target Versions da Issue ------------");
+            System.out.println("Targets: " + issue.getTargetVersions().toString());
+            System.out.println("-----------------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("-------- Erro ao capturar Target Versions da Issue --------");
+            ex.printStackTrace();
+            System.err.println("-----------------------------------------------------------");
+        }
+
+    }
+
+    private void pegaLabels(Issue issue, List<String> linhas, int i) {
+        try {
+            if (linhas.get(i).contains("None")) {
+                return;
+            }
+            i = i + 1;
+            while (!linhas.get(i).contains("</div>")) {
+                if (linhas.get(i).contains("<span>")) {
+                    issue.addLabel(pegaLabel(linhas.get(i)));
+                }
+                i++;
+            }
+            System.out.println("----------- Capturado Labels da Issue ------------");
+            System.out.println("Labels: " + issue.getLabels() == null || issue.getLabels().isEmpty()
+                    ? "None" : issue.getLabels().toString());
+            System.out.println("-----------------------------------------------------");
+        } catch (Exception ex) {
+            System.err.println("-------- Erro ao capturar Labels da Issue --------");
+            System.err.println(linhas.get(i));
+            ex.printStackTrace();
+            System.err.println("-----------------------------------------------------");
+        }
+    }
+
+    private Label pegaLabel(String linha) {
+        //<li><a class="lozenge" href="/jira/secure/IssueNavigator.jspa?reset=true&jqlQuery=labels+%3D+job-filter" title="job-filter"><span>job-filter</span></a></li>
+        Label label = new Label();
+        String[] partes = linha.split("</span>");
+        partes = partes[0].split("<span>");
+        label.setLabel(partes[1]);
+        return label;
     }
 
     private Date pegaData(String linha) {

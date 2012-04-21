@@ -4,16 +4,12 @@
  */
 package apacheJiraMiner.miner;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URL;
-import java.util.Date;
 import apacheJiraMiner.pojo.Projeto;
 import apacheJiraMiner.util.Connection;
 import apacheJiraMiner.util.Util;
+import java.io.BufferedReader;
+import java.net.URL;
+import java.util.Date;
 
 /**
  *

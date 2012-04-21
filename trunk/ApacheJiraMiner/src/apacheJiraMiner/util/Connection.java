@@ -5,10 +5,10 @@
 package apacheJiraMiner.util;
 
 import apacheJiraMiner.pojo.Issue;
+import apacheJiraMiner.pojo.Projeto;
 import dao.DAO;
 import java.util.List;
 import javax.persistence.Persistence;
-import apacheJiraMiner.pojo.Projeto;
 
 /**
  *
