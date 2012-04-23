@@ -18,11 +18,11 @@ public class TargetVersion implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-    @Column(length = 20)
+    @Column(length = 255)
     private String version;
     @ManyToOne
     private Issue issue;
-
+    
     public TargetVersion() {
     }
 

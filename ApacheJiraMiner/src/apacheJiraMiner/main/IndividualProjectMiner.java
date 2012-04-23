@@ -5,7 +5,6 @@
 package apacheJiraMiner.main;
 
 import apacheJiraMiner.miner.HttpIssueMiner;
-import apacheJiraMiner.miner.HttpProjetosMiner;
 import apacheJiraMiner.pojo.Projeto;
 import apacheJiraMiner.util.Connection;
 
@@ -18,18 +17,16 @@ public class IndividualProjectMiner {
     public static void main(String[] args) {
         Connection.conectarDao();
 
-        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
-        try {
-            httpProjetos.minerarProjetos();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-
-        // FOR,HDFS,MAPREDUCE,TRINIDAD,OFBIZ,XMLBEANS,FLUME,QPID
+//        HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
+//        try {
+//            httpProjetos.minerarProjetos();
+//        } catch (Exception ex) {
+//            ex.printStackTrace();
+//        }
 
 
         Projeto projeto = Connection.consultaProjetoPorKey("HADOOP");
-        int proximaPagina = 0;
+        int proximaPagina = 7700;
 
         if (projeto != null) {
             HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina, true, true);
