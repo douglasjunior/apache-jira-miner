@@ -8,7 +8,6 @@
     </editor-bookmarks>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
         <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/apacheJiraMiner/main/IndividualProjectMiner.java</file>
-        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/META-INF/persistence.xml</file>
-        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/log/HADOOP.txt</file>
+        <file>file:/D:/apache-jira-miner/trunk/ApacheJiraMiner/src/apacheJiraMiner/miner/HttpIssueMiner.java</file>
     </open-files>
 </project-private>
