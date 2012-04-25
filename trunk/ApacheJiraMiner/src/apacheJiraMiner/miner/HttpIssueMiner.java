@@ -8,7 +8,6 @@ import apacheJiraMiner.pojo.*;
 import apacheJiraMiner.util.Connection;
 import apacheJiraMiner.util.Util;
 import java.io.BufferedReader;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
@@ -30,6 +29,8 @@ public class HttpIssueMiner {
     private boolean minerarComentarios;
     private boolean minerarCommits;
     private Date dataInicial;
+    private boolean codificarStrings;
+    private boolean filtrarStrings;
 
     /**
      * Construtor padrão e privado pois é obrigatória a informação do Projeto
@@ -41,6 +42,8 @@ public class HttpIssueMiner {
         this.numeroProximaPagina = 0;
         this.minerarComentarios = true;
         this.minerarCommits = true;
+        this.codificarStrings = true;
+        this.filtrarStrings = true;
     }
 
     /**
@@ -888,6 +891,7 @@ public class HttpIssueMiner {
                             System.err.println("Data: " + comentario.getDataComentario());
                             System.err.println("Comentario: " + comentario.getComentario());
                             System.err.println("-----------------------------------------------------------------\n");
+                            Util.writeToFile(logFile, "\t- Comentário [" + comentario.getAutor() + " | " + comentario.getDataComentario() + "] cadastrado e *NÃO* adicioado a Issue.");
                         }
                     } else {
                         System.err.println("\n-------- Erro ao Cadastrar Comentario ----------");
@@ -895,6 +899,7 @@ public class HttpIssueMiner {
                         System.err.println("Data: " + comentario.getDataComentario());
                         System.err.println("Comentario: " + comentario.getComentario());
                         System.err.println("-----------------------------------------------------------------\n");
+                        Util.writeToFile(logFile, "\t- Comentário [" + comentario.getAutor() + " | " + comentario.getDataComentario() + "]  não cadastrado.");
                     }
                 } else {
                     System.err.println("\n-------- Comentario fora da data informada ----------");
@@ -914,7 +919,6 @@ public class HttpIssueMiner {
         Comentario comentario = new Comentario();
         comentario.setAutor(pegaLogin(linhas, i - 3));
         comentario.setDataComentario(pegaData(linhas.get(i - 1)));
-//        comentario.setHoraComentario(pegaHora(linhas.get(i - 1)));
         String linha = linhas.get(i);
         String coment = "";
         while (!linha.contains("twixi-wrap concise actionContainer")) {
@@ -925,8 +929,14 @@ public class HttpIssueMiner {
             linha = linhas.get(i);
         }
         try {
-            comentario.setComentario(URLEncoder.encode(coment, "UTF-8"));
-        } catch (UnsupportedEncodingException ex) {
+            if (filtrarStrings) {
+                coment = Util.filterChar(coment);
+            }
+            if (codificarStrings) {
+                coment = URLEncoder.encode(coment, "UTF-8");
+            }
+            comentario.setComentario(coment);
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
         return comentario;
@@ -970,6 +980,7 @@ public class HttpIssueMiner {
                             System.err.println("Data: " + commit.getDataHora());
                             System.err.println("Mesangem: " + commit.getMensagem());
                             System.err.println("-----------------------------------------------------------------\n");
+                            Util.writeToFile(logFile, "\t- Commit [" + commit.getAutor() + " | " + commit.getnRevisao() + " | " + commit.getDataHora() + "] cadastrado e *NÃO* adicioado a Issue.");
                         }
                     } else {
                         System.err.println("\n-------- Erro ao Cadastrar Commit ----------");
@@ -977,6 +988,7 @@ public class HttpIssueMiner {
                         System.err.println("Data: " + commit.getDataHora());
                         System.err.println("Mesangem: " + commit.getMensagem());
                         System.err.println("-----------------------------------------------------------------\n");
+                        Util.writeToFile(logFile, "\t- Commit [" + commit.getAutor() + " | " + commit.getnRevisao() + " | " + commit.getDataHora() + "] não cadastrado.");
                     }
                 } else {
                     System.err.println("\n-------- Commit fora da data informada ----------");
@@ -1202,5 +1214,16 @@ public class HttpIssueMiner {
         }
         dis = null;
         return linhas;
+    }
+
+    /**
+     * Passe 'true' ou 'false' para que as Strings sejam ou não codificadas em UTF-8 e filtradas antes de gravar no banco de dados. 
+     * Se nada for passado, será assumido como 'true'.
+     * @param codificarStrings true ou false.
+     * @param filtrarStrings true ou false.
+     */
+    public void setFiltrarCodificarStrings(boolean filtrarStrings, boolean codificarStrings) {
+        this.filtrarStrings = filtrarStrings;
+        this.codificarStrings = codificarStrings;
     }
 }
