@@ -8,6 +8,10 @@ import apacheJiraMiner.miner.HttpIssueMiner;
 import apacheJiraMiner.miner.HttpProjetosMiner;
 import apacheJiraMiner.pojo.Projeto;
 import apacheJiraMiner.util.Connection;
+import apacheJiraMiner.util.Util;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.List;
 
 /**
  *
@@ -15,7 +19,7 @@ import apacheJiraMiner.util.Connection;
  */
 public class IndividualProjectMiner {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws MalformedURLException, Exception {
         Connection.conectarDao();
 
         HttpProjetosMiner httpProjetos = new HttpProjetosMiner();
@@ -25,11 +29,15 @@ public class IndividualProjectMiner {
             ex.printStackTrace();
         }
 
-        Projeto projeto = Connection.consultaProjetoPorKey("HADOOP");
+        Connection.fecharConexao();
+
+        Connection.conectarDao();
+
+        Projeto projeto = Connection.consultaProjetoPorKey("DERBY");
         int proximaPagina = 0;
 
         if (projeto != null) {
-            HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina, true, true);
+            HttpIssueMiner httpIssues = new HttpIssueMiner(projeto, proximaPagina, true, false);
             httpIssues.setFiltrarCodificarStrings(true, false);
             try {
                 httpIssues.minerarIssues();
