@@ -4,15 +4,13 @@
  */
 package apacheJiraMiner.util;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  *
@@ -71,5 +69,24 @@ public class Util {
         }
         padrao.append("]");
         return (texto.replaceAll(padrao.toString(), " "));
+    }
+
+    public static String removeCodigoHTML(String texto, boolean trocaPorEspaco) {
+        texto = texto.replaceAll("<.*?>", trocaPorEspaco ? " " : "");
+        return texto;
+    }
+
+    public static List<String> capturarCodigoHtml(BufferedReader dis) throws Exception {
+        if (dis == null) {
+            return null;
+        }
+        List<String> linhas = new ArrayList<String>();
+        String linha = dis.readLine();
+        while (!linha.trim().equals("</html>")) {
+            linhas.add(linha);
+            linha = dis.readLine();
+        }
+        dis = null;
+        return linhas;
     }
 }

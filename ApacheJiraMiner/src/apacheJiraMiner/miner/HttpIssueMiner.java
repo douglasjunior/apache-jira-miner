@@ -12,7 +12,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -125,7 +124,7 @@ public class HttpIssueMiner {
             BufferedReader disComentarios = Util.abrirStream(urlComentarios);
             BufferedReader disCommits = Util.abrirStream(urlCommmits);
             System.out.println("---- Conectado a URL : " + getUrl());
-            lerPaginasHtmlsEAtualizarIssuesExistentes(capturarCodigoHtml(disComentarios), capturarCodigoHtml(disCommits));
+            lerPaginasHtmlsEAtualizarIssuesExistentes(Util.capturarCodigoHtml(disComentarios), Util.capturarCodigoHtml(disCommits));
             disComentarios.close();
             disCommits.close();
             urlComentarios = null;
@@ -178,7 +177,7 @@ public class HttpIssueMiner {
                 BufferedReader disCommits = Util.abrirStream(urlComentarios);
                 System.out.println("---- Conectado a URL : " + getUrl());
 
-                List<String> linhas = capturarCodigoHtml(disCommits);
+                List<String> linhas = Util.capturarCodigoHtml(disCommits);
                 for (int i = linhas.size() - 300; i < linhas.size(); i++) {
                     pegarDadosIssue(issue, linhas, i);
                 }
@@ -306,7 +305,7 @@ public class HttpIssueMiner {
                 BufferedReader disCommits = Util.abrirStream(urlCommmits);
                 System.out.println("---- Conectado a URL : " + getUrl());
                 try {
-                    lerCommits(issue, capturarCodigoHtml(disCommits), true);
+                    lerCommits(issue, Util.capturarCodigoHtml(disCommits), true);
                     Util.writeToFile(logFile, "Commits minerados com sucesso da issue: " + issue.getNumeroIssue());
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -357,15 +356,19 @@ public class HttpIssueMiner {
             }
             System.out.println("---- Conectando a URL : " + getUrl());
             URL urlComentarios = new URL(getUrl() + "?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#issue-tabs");
-            URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jira.plugin.ext.subversion:subversion-commits-tabpanel#issue-tabs");
             BufferedReader disComentarios = Util.abrirStream(urlComentarios);
-            BufferedReader disCommits = Util.abrirStream(urlCommmits);
+            BufferedReader disCommits = null;
+            if (minerarCommits) {
+                URL urlCommmits = new URL(getUrl() + "?page=com.atlassian.jirafisheyeplugin:fisheye-issuepanel#issue-tabs");
+                disCommits = Util.abrirStream(urlCommmits);
+            }
             System.out.println("---- Conectado a URL : " + getUrl());
-            lerPaginasHtmlsESalvarNovasIssues(capturarCodigoHtml(disComentarios), capturarCodigoHtml(disCommits));
+            lerPaginasHtmlsESalvarNovasIssues(Util.capturarCodigoHtml(disComentarios), Util.capturarCodigoHtml(disCommits));
             disComentarios.close();
-            disCommits.close();
+            if (minerarCommits) {
+                disCommits.close();
+            }
             urlComentarios = null;
-            urlCommmits = null;
             disComentarios = null;
             disCommits = null;
             contadorGC++;
@@ -493,21 +496,15 @@ public class HttpIssueMiner {
     private String pegaDescricao(List<String> linhas, int i) {
         StringBuilder sb = new StringBuilder();
         try {
-            int qtdDiv = 0;
-            while (!linhas.get(i).contains("</div>") && qtdDiv == 0) {
-                if (linhas.get(i).contains("<div")) {
-                    qtdDiv++;
-                }
-                if (linhas.get(i).contains("</div>")) {
-                    qtdDiv--;
-                }
-                sb.append(linhas.get(i));
+            while (!linhas.get(i).contains("toggle-wrap") || linhas.get(i).contains("description-val")) {
+                sb.append(Util.removeCodigoHTML(linhas.get(i), true));
                 sb.append("\n");
                 i++;
             }
             System.out.println("----------- Capturado Descrição da Issue ------------");
             System.out.println("Descrição: " + sb.toString());
             System.out.println("-----------------------------------------------------");
+
         } catch (Exception ex) {
             System.err.println("-------- Erro ao capturar Descrição da Issue --------");
             ex.printStackTrace();
@@ -526,38 +523,36 @@ public class HttpIssueMiner {
             return false;
         } else if (linhas.get(i).contains("environment-val")) { // pega ENVIRONMENT
             issue.setAmbiente(pegaAmbiente(linhas, i));
-        } else if (linhas.get(i).contains("issue_header_summary")) { // pega NAME
-            issue.setNome(pegaNome(linhas.get(i)));
-        } else if (linhas.get(i).contains("type-val")
-                && linhas.get(i).contains("class=\"value\"")
-                && linhas.get(i).contains("<span")) { // pega TIPO
-            issue.setTipo(pegaTipo(linhas.get(i + 2)));
+        } else if (linhas.get(i).contains("summary-val")) { // pega NAME
+            issue.setNome(pegaNome(linhas.get(i + 1)));
+        } else if (linhas.get(i).contains("type-val")) { // pega TIPO
+            issue.setTipo(pegaTipo(linhas.get(i + 1)));
         } else if (linhas.get(i).contains("versions-val")) { // pega VERSAO AFETADA
             issue.setVersoesAfetadas(pegaVersoes(linhas, i));
         } else if (linhas.get(i).contains("status-val")) { // pega STATUS
-            issue.setStatus(pegaStatus(linhas.get(i + 2)));
+            issue.setStatus(pegaStatus(linhas.get(i + 1)));
         } else if (linhas.get(i).contains("resolution-val")) { // pega RESOLUCAO
             issue.setResolucao(pegaResolucao(linhas.get(i + 1)));
         } else if (linhas.get(i).contains("fixfor-val")) { // pega VERSAO FIXADA
             issue.setVersoesFixadas(pegaVersoes(linhas, i));
         } else if (linhas.get(i).contains("assignee-val")) { // pega ASSIGNEE
-            issue.setAssignee(pegaLogin(linhas, i));
+            issue.setAssignee(pegaLogin(linhas.get(i)));
         } else if (linhas.get(i).contains("reporter-val")) { // pega REPORTER
-            issue.setReporter(pegaLogin(linhas, i));
+            issue.setReporter(pegaLogin(linhas.get(i)));
         } else if (linhas.get(i).contains("priority-val")) { // pega PRIORIDADE
-            issue.setPrioridade(pegaPrioridade(linhas.get(i + 2)));
+            issue.setPrioridade(pegaPrioridade(linhas.get(i + 1)));
         } else if (linhas.get(i).contains("wrap-labels")) { // pega LABELS
             pegaLabels(issue, linhas, i + 3);
         } else if (linhas.get(i).contains("Target Version/s")) { // pega TARGET VERSIONS
             pegaTargeVersions(issue, linhas.get(i + 3));
-        } else if (linhas.get(i).contains("issue-description")) { // pega DESCRICAO
-            issue.setDescricao(pegaDescricao(linhas, i + 1));
+        } else if (linhas.get(i).contains("description-val")) { // pega DESCRICAO
+            issue.setDescricao(pegaDescricao(linhas, i));
         } else if (linhas.get(i).contains("components-val")) { // pega COMPONENTES
             issue.setComponentes(pegaComponentes(linhas, i));
         } else if (linhas.get(i).contains("create-date")) { // pega DATA CRIADA
-            issue.setDataCriada(pegaData(linhas.get(i)));
+            issue.setDataCriada(pegaData(linhas.get(i - 2)));
         } else if (linhas.get(i).contains("resolved-date")) { // pega DATA RESOLVIDA
-            issue.setDataResolvida(pegaData(linhas.get(i)));
+            issue.setDataResolvida(pegaData(linhas.get(i - 2)));
         }
         return true;
     }
@@ -655,20 +650,7 @@ public class HttpIssueMiner {
             if (linhas.get(i + 1).contains("None")) {
                 componentes = "None";
             } else {
-                String linha = "";
-                int j = i + 2;
-                while (!linhas.get(j).contains("</div>")) {
-                    linha += linhas.get(j);
-                    j++;
-                }
-                if (linha.contains(">,")) {
-                    String[] comps = linha.split(">,");
-                    for (String comp : comps) {
-                        componentes += pegaComponente(comp) + ";";
-                    }
-                } else {
-                    componentes = pegaComponente(linha);
-                }
+                componentes = Util.removeCodigoHTML(linhas.get(i + 2), false).trim();
             }
             System.out.println("-------- Capturado Componente da Issue ---------");
             System.out.println("Componente: " + componentes);
@@ -697,7 +679,7 @@ public class HttpIssueMiner {
     private String pegaPrioridade(String linha) {
         String prioridade = null;
         try {
-            prioridade = linha.trim();
+            prioridade = Util.removeCodigoHTML(linha, false).trim();
             System.out.println("-------- Capturado Prioridade da Issue ---------");
             System.out.println("Prioridade: " + prioridade);
             System.out.println("------------------------------------------------");
@@ -709,17 +691,11 @@ public class HttpIssueMiner {
         return prioridade;
     }
 
-    private String pegaLogin(List<String> linhas, int i) {
+    private String pegaLogin(String linha) {
 //        <a class="user-hover" rel="jdillon" id="issue_summary_assignee_jdillon" href="/jira/secure/ViewProfile.jspa?name=jdillon">Jason Dillon</a>
         String login = "";
         try {
-            if (!linhas.get(i + 1).contains("<a")) {
-                login = "unassigned";
-            } else {
-                String[] partes = linhas.get(i + 1).split("rel=\"");
-                partes = partes[1].split("\"");
-                login = partes[0];
-            }
+            login = Util.removeCodigoHTML(linha, false).trim();
             System.out.println("--------- Capturado Assignee da Issue ----------");
             System.out.println("Assignee: " + login);
             System.out.println("------------------------------------------------");
@@ -734,7 +710,7 @@ public class HttpIssueMiner {
     private String pegaResolucao(String linha) {
         String resol = null;
         try {
-            resol = linha.trim().replaceAll("&#39;", "'");
+            resol = linha.trim();
             System.out.println("--------- Capturado Resolucao da Issue ---------");
             System.out.println("Resolucao: " + resol);
             System.out.println("------------------------------------------------");
@@ -750,7 +726,7 @@ public class HttpIssueMiner {
     private String pegaStatus(String linha) {
         String status = null;
         try {
-            status = linha.trim();
+            status = Util.removeCodigoHTML(linha, false).trim();
             System.out.println("---------- Capturado Status da Issue -----------");
             System.out.println("Status: " + status);
             System.out.println("------------------------------------------------");
@@ -813,7 +789,7 @@ public class HttpIssueMiner {
 //            </span>
         String tipo = "";
         try {
-            tipo = linha.trim();
+            tipo = Util.removeCodigoHTML(linha, false).trim();
             System.out.println("----------- Capturado Tipo da Issue ------------");
             System.out.println("Tipo: " + tipo);
             System.out.println("------------------------------------------------");
@@ -828,11 +804,15 @@ public class HttpIssueMiner {
 
     private String pegaNome(String linha) {
         // <h2 id="issue_header_summary" class="item-summary"><a href="/jira/browse/LUCENE-1400">Add Apache RAT (Release Audit Tool) target to build.xml</a></h2>
+
+//<h1 id="summary-val">
+//    QueryParser does not recognized negative numbers...
+//    
+//</h1>
+
         String nome = "";
         try {
-            String[] partes = linha.split("</a>");
-            partes = partes[0].split(">");
-            nome = partes[partes.length - 1];
+            nome = linha.trim();
             System.out.println("----------- Capturado Nome da Issue ------------");
             System.out.println("Nome: " + nome);
             System.out.println("------------------------------------------------");
@@ -840,7 +820,6 @@ public class HttpIssueMiner {
             System.err.println("------- Erro ao capturar Nome da Issue ---------");
             ex.printStackTrace();
             System.err.println("------------------------------------------------");
-
         }
         return nome;
     }
@@ -917,7 +896,7 @@ public class HttpIssueMiner {
 
     private Comentario pegarComentario(List<String> linhas, int i) {
         Comentario comentario = new Comentario();
-        comentario.setAutor(pegaLogin(linhas, i - 3));
+        comentario.setAutor(pegaLogin(linhas.get(i - 2)));
         comentario.setDataComentario(pegaData(linhas.get(i - 1)));
         String linha = linhas.get(i);
         String coment = "";
@@ -931,6 +910,7 @@ public class HttpIssueMiner {
         try {
             if (filtrarStrings) {
                 coment = Util.filterChar(coment);
+                coment = Util.filterChar(Util.removeCodigoHTML(coment, false));
             }
             if (codificarStrings) {
                 coment = URLEncoder.encode(coment, "UTF-8");
@@ -1205,20 +1185,11 @@ public class HttpIssueMiner {
         return projeto.getLinkIssue().replaceAll("-1", "-" + numeroProximaPagina);
     }
 
-    private List<String> capturarCodigoHtml(BufferedReader dis) throws Exception {
-        List<String> linhas = new ArrayList<String>();
-        String linha = dis.readLine();
-        while (!linha.trim().equals("</html>")) {
-            linhas.add(linha);
-            linha = dis.readLine();
-        }
-        dis = null;
-        return linhas;
-    }
-
     /**
-     * Passe 'true' ou 'false' para que as Strings sejam ou não codificadas em UTF-8 e filtradas antes de gravar no banco de dados. 
-     * Se nada for passado, será assumido como 'true'.
+     * Passe 'true' ou 'false' para que as Strings sejam ou não codificadas em
+     * UTF-8 e filtradas antes de gravar no banco de dados. Se nada for passado,
+     * será assumido como 'true'.
+     *
      * @param codificarStrings true ou false.
      * @param filtrarStrings true ou false.
      */
