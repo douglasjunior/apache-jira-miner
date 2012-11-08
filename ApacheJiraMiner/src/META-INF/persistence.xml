@@ -10,7 +10,7 @@
     <class>apacheJiraMiner.pojo.Label</class>
     <class>apacheJiraMiner.pojo.TargetVersion</class>
     <properties>
-      <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/aluno"/>
+      <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/aluno2"/>
       <property name="javax.persistence.jdbc.password" value="aluno"/>
       <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
       <property name="javax.persistence.jdbc.user" value="aluno"/>
