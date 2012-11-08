@@ -30,6 +30,7 @@ public class HttpIssueMiner {
     private Date dataInicial;
     private boolean codificarStrings;
     private boolean filtrarStrings;
+    private static final String[][] meses = new String[][]{{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}, {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}};
 
     /**
      * Construtor padrão e privado pois é obrigatória a informação do Projeto
@@ -514,7 +515,7 @@ public class HttpIssueMiner {
     }
 
     private boolean pegarDadosIssue(Issue issue, List<String> linhas, int i) {
-        if (linhas.get(i).contains("<title>Issue Does Not Exist - ASF JIRA </title>")) {
+        if (linhas.get(i).contains("<title>") && linhas.get(i).contains("Issue Does Not Exist")) {
             inexistentes++;
             System.err.println("---------------------------------------------\n");
             System.err.println("A página de Issue não existe");
@@ -618,7 +619,6 @@ public class HttpIssueMiner {
             partes = partes[1].split(">");
             partes[0] = partes[0].replaceAll("\"", "").replaceAll("'", "".trim());
             DateFormat df = new SimpleDateFormat("dd/MM/yy HH:mm");
-            String[][] meses = new String[][]{{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}, {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}};
             partes = partes[0].split("/");
             for (int i = 0; i < meses[0].length; i++) {
                 if (partes[1].equals(meses[0][i])) {
@@ -631,7 +631,6 @@ public class HttpIssueMiner {
             System.out.println("----------- Capturado Data da Issue ------------");
             System.out.println("Data: " + data.toString());
             System.out.println("String: " + partes[0] + "/" + partes[1] + "/" + partes[2]);
-            System.out.println("Linha: " + linha);
             System.out.println("------------------------------------------------");
         } catch (Exception ex) {
             System.err.println("-------- Erro ao capturar Data da Issue --------");
